@@ -1,0 +1,8 @@
+node_modules/
+.env
+data/*.sqlite
+data/*.sqlite-journal
+data/kyc-uploads/
+data/payment-proofs/
+data/deposit-proofs/
+data/pre-restore-backups/

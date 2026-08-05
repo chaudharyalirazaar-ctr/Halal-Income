@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAQ — Halal Income</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">
+        <img src="logo.svg" alt="Halal Income logo" class="logo-mark" />
+        Halal Income
+      </a>
+      <input type="checkbox" id="nav-toggle" class="nav-toggle" />
+      <label for="nav-toggle" class="nav-burger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </label>
+      <nav class="main-nav">
+        <a href="how-it-works.html" data-i18n="nav.howItWorks">How it works</a>
+        <a href="invest.html" data-i18n="nav.invest">Invest</a>
+        <a href="about.html" data-i18n="nav.about">About</a>
+        <a href="analytics.html" data-i18n="nav.analytics">Analytics</a>
+        <a href="faq.html" data-i18n="nav.faq">FAQ</a>
+        <div class="profile-switch nav-loggedin-only">
+          <button type="button" id="profile-toggle" class="profile-btn" aria-haspopup="true" aria-expanded="false">
+            <span data-i18n="nav.myProfile">My profile</span> ▾
+          </button>
+          <div class="profile-menu" id="profile-menu">
+            <a href="referral.html" data-i18n="nav.referral">Referral</a>
+            <a href="balance.html" data-i18n="nav.balance">Balance</a>
+            <a href="verify.html" data-i18n="nav.verifyProfile">Verify profile</a>
+          </div>
+        </div>
+        <div class="lang-switch">
+          <button type="button" id="lang-toggle" class="lang-btn" aria-haspopup="true" aria-expanded="false">🌐 <span id="lang-current">EN</span></button>
+          <div class="lang-menu" id="lang-menu">
+            <button type="button" data-lang="en">English</button>
+            <button type="button" data-lang="ar">العربية</button>
+            <button type="button" data-lang="ur">اردو</button>
+            <button type="button" data-lang="hi">हिन्दी</button>
+            <button type="button" data-lang="bn">বাংলা</button>
+            <button type="button" data-lang="id">Bahasa Indonesia</button>
+            <button type="button" data-lang="tr">Türkçe</button>
+            <button type="button" data-lang="fa">فارسی</button>
+            <button type="button" data-lang="fr">Français</button>
+            <button type="button" data-lang="es">Español</button>
+            <button type="button" data-lang="sw">Kiswahili</button>
+            <button type="button" data-lang="zh">中文</button>
+            <button type="button" data-lang="ru">Русский</button>
+            <button type="button" data-lang="pt">Português</button>
+            <button type="button" data-lang="de">Deutsch</button>
+
+          </div>
+        </div>
+        <a href="login.html" class="nav-loggedout-only nav-login-link" data-i18n="nav.login">Log in</a>
+        <a href="signup.html" class="nav-cta nav-loggedout-only" data-i18n="nav.createAccount">Create account</a>
+        <button type="button" id="demo-login-toggle" class="demo-login-btn nav-loggedin-only">Log out (demo)</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <p class="eyebrow" data-i18n="section.faq.eyebrow">Questions</p>
+        <h1 data-i18n="section.faq.title">Before you register your interest</h1>
+
+        <div class="faq-list" style="margin-top: 36px;">
+          <details class="faq-item">
+            <summary data-i18n="faq.q1">What happens in a month the business doesn't profit?</summary>
+            <p data-i18n="faq.a1">No distribution is made that month. The profit-share only pays out of real, realized profit — there is no fixed amount owed regardless of performance.</p>
+          </details>
+          <details class="faq-item">
+            <summary data-i18n="faq.q2">Can I withdraw my original capital?</summary>
+            <p data-i18n="faq.a2">Replace with your client's real terms: describe the actual notice period, lock-in, or conditions for returning principal.</p>
+          </details>
+          <details class="faq-item">
+            <summary data-i18n="faq.q3">How is this Shariah-compliant?</summary>
+            <p data-i18n="faq.a3">Replace with specifics: name the profit-sharing structure used (e.g. Mudarabah or Musharakah), and note whether a scholar or Shariah board has reviewed it.</p>
+          </details>
+          <details class="faq-item">
+            <summary data-i18n="faq.q4">Is this regulated?</summary>
+            <p data-i18n="faq.a4">Replace with your client's real, verifiable registration or license details — only include information a prospective investor could independently confirm.</p>
+          </details>
+          <details class="faq-item">
+            <summary data-i18n="faq.q5">How does the referral program work?</summary>
+            <p data-i18n="faq.a5">You earn points when someone you refer makes their first investment. Points can be redeemed for USDT. It's a one-time reward per referred investor — not a recruitment ladder with multiple levels.</p>
+          </details>
+          <details class="faq-item">
+            <summary data-i18n="faq.q6">How do I claim or withdraw my profit?</summary>
+            <p data-i18n="faq.a6">Once logged in, your Balance page lists your active investments. Profit distributed for a given month can be claimed there, and claimed profit can be withdrawn according to your client's real payout process — replace with actual terms.</p>
+          </details>
+        </div>
+
+        <div class="faq-contact-card">
+          <p class="eyebrow" data-i18n="contact.eyebrow">Get in touch</p>
+          <h2 data-i18n="contact.titleQuestion">Have a question?</h2>
+          <p data-i18n="contact.body">
+            This isn't an instant self-serve deposit — a real conversation comes first.
+            Share your details and our team will follow up to walk through the model,
+            answer questions, and share documentation.
+          </p>
+          <button type="button" class="btn faq-ai-btn" id="ai-assistant-btn" data-i18n="faq.talkToAI">Talk to AI assistant</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="ai-modal-overlay" id="ai-modal-overlay">
+    <div class="ai-modal">
+      <h3 data-i18n="faq.aiModalTitle">Ask about Halal Income</h3>
+      <p class="ai-modal-intro" data-i18n="faq.aiIntro">Ask a question about how the platform works. It can't see your account or give personalized financial advice — for that, contact our team.</p>
+
+      <div id="ai-chat-messages" class="ai-chat-messages"></div>
+
+      <form id="ai-chat-form" class="ai-chat-form">
+        <input type="text" id="ai-chat-input" class="ai-chat-input" placeholder="Type your question…" autocomplete="off" />
+        <button type="submit" class="btn btn-primary ai-chat-send" data-i18n="faq.aiSend">Send</button>
+      </form>
+
+      <p class="ai-modal-footnote" data-i18n="faq.aiModalBody">
+        Answers are generated by an AI assistant grounded in this site's published content and can
+        be wrong — always confirm anything important with our team before acting on it.
+      </p>
+      <button type="button" class="btn btn-ghost ai-modal-close" id="ai-modal-close" data-i18n="faq.aiModalClose">Close</button>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>© <span id="year"></span> Halal Income</span>
+      <span class="footer-disclaimer" data-i18n="footer.disclaimer">All investment carries risk. Figures shown are illustrative and not guaranteed.</span>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="auth.js"></script>
+  <script src="notifications-ui.js"></script>
+  <script src="i18n.js"></script>
+  <script src="i18n-extra2.js"></script>
+  <script>
+    // Real AI assistant, backed by POST /api/assistant/chat (see
+    // backend/src/routes/assistant.js). History is kept in memory only —
+    // nothing is persisted once the modal is closed or the page reloads.
+    (function () {
+      var btn = document.getElementById("ai-assistant-btn");
+      var overlay = document.getElementById("ai-modal-overlay");
+      var closeBtn = document.getElementById("ai-modal-close");
+      var messagesEl = document.getElementById("ai-chat-messages");
+      var form = document.getElementById("ai-chat-form");
+      var input = document.getElementById("ai-chat-input");
+      if (!btn || !overlay) return;
+
+      var history = [];
+
+      function addBubble(role, text) {
+        var bubble = document.createElement("div");
+        bubble.className = "ai-chat-msg ai-chat-msg--" + role;
+        bubble.textContent = text;
+        messagesEl.appendChild(bubble);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return bubble;
+      }
+
+      function resetChat() {
+        messagesEl.innerHTML = "";
+        history = [];
+        addBubble("assistant", "Hi! Ask me anything about how Halal Income works.");
+      }
+
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        var text = input.value.trim();
+        if (!text) return;
+
+        addBubble("user", text);
+        history.push({ role: "user", content: text });
+        input.value = "";
+        input.disabled = true;
+
+        var pending = addBubble("assistant", "…");
+
+        try {
+          var res = await fetch("/api/assistant/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text, history: history.slice(0, -1) }),
+          });
+          var data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Something went wrong.");
+          pending.textContent = data.reply;
+          history.push({ role: "assistant", content: data.reply });
+        } catch (err) {
+          pending.textContent = err.message;
+          pending.classList.add("ai-chat-msg--error");
+        } finally {
+          input.disabled = false;
+          input.focus();
+        }
+      });
+
+      btn.addEventListener("click", function () {
+        resetChat();
+        overlay.classList.add("ai-modal-open");
+        input.focus();
+      });
+      closeBtn.addEventListener("click", function () { overlay.classList.remove("ai-modal-open"); });
+      overlay.addEventListener("click", function (e) {
+        if (e.target === overlay) overlay.classList.remove("ai-modal-open");
+      });
+    })();
+  </script>
+</body>
+</html>

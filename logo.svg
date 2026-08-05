@@ -1,0 +1,7 @@
+<svg width="280" height="280" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg" role="img">
+  <title>Halal Income logo</title>
+  <circle cx="140" cy="140" r="100" fill="#1F4A3D"/>
+  <text x="140" y="110" text-anchor="middle" font-family="'Traditional Arabic','Noto Naskh Arabic',serif" font-size="26" fill="#B8925A">حلال</text>
+  <text x="140" y="145" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="600" fill="#B8925A">Halal</text>
+  <text x="140" y="172" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#F1EDE1">Income</text>
+</svg>

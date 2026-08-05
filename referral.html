@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Referral — Halal Income</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">
+        <img src="logo.svg" alt="Halal Income logo" class="logo-mark" />
+        Halal Income
+      </a>
+      <input type="checkbox" id="nav-toggle" class="nav-toggle" />
+      <label for="nav-toggle" class="nav-burger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </label>
+      <nav class="main-nav">
+        <a href="how-it-works.html" data-i18n="nav.howItWorks">How it works</a>
+        <a href="invest.html" data-i18n="nav.invest">Invest</a>
+        <a href="about.html" data-i18n="nav.about">About</a>
+        <a href="analytics.html" data-i18n="nav.analytics">Analytics</a>
+        <a href="faq.html" data-i18n="nav.faq">FAQ</a>
+        <div class="profile-switch nav-loggedin-only">
+          <button type="button" id="profile-toggle" class="profile-btn" aria-haspopup="true" aria-expanded="false">
+            <span data-i18n="nav.myProfile">My profile</span> ▾
+          </button>
+          <div class="profile-menu" id="profile-menu">
+            <a href="referral.html" data-i18n="nav.referral">Referral</a>
+            <a href="balance.html" data-i18n="nav.balance">Balance</a>
+            <a href="verify.html" data-i18n="nav.verifyProfile">Verify profile</a>
+          </div>
+        </div>
+        <div class="lang-switch">
+          <button type="button" id="lang-toggle" class="lang-btn" aria-haspopup="true" aria-expanded="false">🌐 <span id="lang-current">EN</span></button>
+          <div class="lang-menu" id="lang-menu">
+            <button type="button" data-lang="en">English</button>
+            <button type="button" data-lang="ar">العربية</button>
+            <button type="button" data-lang="ur">اردو</button>
+            <button type="button" data-lang="hi">हिन्दी</button>
+            <button type="button" data-lang="bn">বাংলা</button>
+            <button type="button" data-lang="id">Bahasa Indonesia</button>
+            <button type="button" data-lang="tr">Türkçe</button>
+            <button type="button" data-lang="fa">فارسی</button>
+            <button type="button" data-lang="fr">Français</button>
+            <button type="button" data-lang="es">Español</button>
+            <button type="button" data-lang="sw">Kiswahili</button>
+            <button type="button" data-lang="zh">中文</button>
+            <button type="button" data-lang="ru">Русский</button>
+            <button type="button" data-lang="pt">Português</button>
+            <button type="button" data-lang="de">Deutsch</button>
+
+          </div>
+        </div>
+        <a href="login.html" class="nav-loggedout-only nav-login-link" data-i18n="nav.login">Log in</a>
+        <a href="signup.html" class="nav-cta nav-loggedout-only" data-i18n="nav.createAccount">Create account</a>
+        <button type="button" id="demo-login-toggle" class="demo-login-btn nav-loggedin-only">Log out (demo)</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+
+        <!-- Shown when the visitor isn't logged in -->
+        <div id="logged-out-message" style="display:none;">
+          <p class="eyebrow" data-i18n="nav.referral">Referral</p>
+          <h1 data-i18n="referral.loginPrompt">Log in to see your referral details</h1>
+          <p data-i18n="auth.loggedOutIntro">This page is only meaningful for a signed-in investor. Log in or create an account using the links in the navigation above to see your referral link and points.</p>
+        </div>
+
+        <!-- Shown when the visitor is logged in -->
+        <div id="logged-in-content" style="display:none;">
+          <p class="eyebrow" data-i18n="nav.referral">Referral</p>
+          <h1 data-i18n="referral.title">Your referral program</h1>
+          <p style="max-width: 60ch;" data-i18n="referral.bodyIntro">One reward per person you refer, paid when they make their first investment — not a multi-level structure, and not tied to how much they invest.</p>
+
+          <div class="stat-cards" style="margin-top: 32px;">
+            <div class="stat-card">
+              <p class="stat-label" data-i18n="referral.statReferred">People referred</p>
+              <p class="stat-value" id="ref-count">0</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label" data-i18n="referral.statPoints">Points earned</p>
+              <p class="stat-value" id="ref-points">0</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label" data-i18n="referral.statUsdt">Redeemable value</p>
+              <p class="stat-value" id="ref-usdt">$0</p>
+            </div>
+          </div>
+
+          <div class="chart-card" style="margin-top: 24px;">
+            <p class="chart-title" data-i18n="referral.linkTitle">Your referral link</p>
+            <div class="referral-link-row">
+              <input type="text" id="referral-link" readonly value="https://halalincome.example/join?ref=DEMO123" />
+              <button type="button" class="btn btn-ghost btn-small" id="copy-link" data-i18n="referral.copy">Copy</button>
+            </div>
+            <p style="font-size: 0.85rem; opacity: 0.7; margin-top: 10px;">
+              <em data-i18n="referral.linkNote">Replace the domain above with your client's real domain once the site is live.</em>
+            </p>
+          </div>
+
+          <div class="table-card" style="margin-top: 24px;">
+            <table class="analytics-table">
+              <thead>
+                <tr><th data-i18n="referral.colPerson">Referred person</th><th data-i18n="referral.colStatus">Status</th><th data-i18n="referral.colPoints">Points earned</th></tr>
+              </thead>
+              <tbody id="referral-table-body"></tbody>
+            </table>
+          </div>
+
+          <div class="chart-card" style="margin-top: 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+            <div>
+              <p class="chart-title" style="margin-bottom:4px;" data-i18n="referral.redeemTitle">Redeem points for USDT</p>
+              <p style="font-size:0.85rem; opacity:0.75; margin:0;" data-i18n="referral.redeemRate">Example rate: 10 points = $1 USDT. Replace with your client's real rate.</p>
+            </div>
+            <button type="button" class="btn btn-primary" id="redeem-btn" data-i18n="referral.redeem">Redeem all points</button>
+          </div>
+
+          <div class="table-card" style="margin-top: 24px;">
+            <p class="chart-title" style="padding: 14px 16px 0;">Top referrers</p>
+            <p style="font-size: 0.85rem; opacity: 0.7; padding: 4px 16px 12px;">
+              Ranked by how many people you referred who went on to make their first investment.
+            </p>
+            <table class="analytics-table">
+              <thead>
+                <tr><th>#</th><th>Referrer</th><th>Invited investors</th><th>Points</th></tr>
+              </thead>
+              <tbody id="leaderboard-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>© <span id="year"></span> Halal Income</span>
+      <span class="footer-disclaimer" data-i18n="footer.disclaimer">All investment carries risk. Figures shown are illustrative and not guaranteed.</span>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="auth.js"></script>
+  <script src="notifications-ui.js"></script>
+  <script src="i18n.js"></script>
+  <script src="i18n-extra2.js"></script>
+  <script src="referral.js"></script>
+</body>
+</html>

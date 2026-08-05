@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log in — Halal Income</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">
+        <img src="logo.svg" alt="Halal Income logo" class="logo-mark" />
+        Halal Income
+      </a>
+      <input type="checkbox" id="nav-toggle" class="nav-toggle" />
+      <label for="nav-toggle" class="nav-burger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </label>
+      <nav class="main-nav">
+        <a href="how-it-works.html" data-i18n="nav.howItWorks">How it works</a>
+        <a href="invest.html" data-i18n="nav.invest">Invest</a>
+        <a href="about.html" data-i18n="nav.about">About</a>
+        <a href="analytics.html" data-i18n="nav.analytics">Analytics</a>
+        <a href="faq.html" data-i18n="nav.faq">FAQ</a>
+        <div class="profile-switch nav-loggedin-only">
+          <button type="button" id="profile-toggle" class="profile-btn" aria-haspopup="true" aria-expanded="false">
+            <span data-i18n="nav.myProfile">My profile</span> ▾
+          </button>
+          <div class="profile-menu" id="profile-menu">
+            <a href="referral.html" data-i18n="nav.referral">Referral</a>
+            <a href="balance.html" data-i18n="nav.balance">Balance</a>
+            <a href="verify.html" data-i18n="nav.verifyProfile">Verify profile</a>
+          </div>
+        </div>
+        <div class="lang-switch">
+          <button type="button" id="lang-toggle" class="lang-btn" aria-haspopup="true" aria-expanded="false">🌐 <span id="lang-current">EN</span></button>
+          <div class="lang-menu" id="lang-menu">
+            <button type="button" data-lang="en">English</button>
+            <button type="button" data-lang="ar">العربية</button>
+            <button type="button" data-lang="ur">اردو</button>
+            <button type="button" data-lang="hi">हिन्दी</button>
+            <button type="button" data-lang="bn">বাংলা</button>
+            <button type="button" data-lang="id">Bahasa Indonesia</button>
+            <button type="button" data-lang="tr">Türkçe</button>
+            <button type="button" data-lang="fa">فارسی</button>
+            <button type="button" data-lang="fr">Français</button>
+            <button type="button" data-lang="es">Español</button>
+            <button type="button" data-lang="sw">Kiswahili</button>
+            <button type="button" data-lang="zh">中文</button>
+            <button type="button" data-lang="ru">Русский</button>
+            <button type="button" data-lang="pt">Português</button>
+            <button type="button" data-lang="de">Deutsch</button>
+          </div>
+        </div>
+        <a href="login.html" class="nav-loggedout-only nav-login-link" data-i18n="nav.login">Log in</a>
+        <a href="signup.html" class="nav-cta nav-loggedout-only" data-i18n="nav.createAccount">Create account</a>
+        <button type="button" id="demo-login-toggle" class="demo-login-btn nav-loggedin-only">Log out (demo)</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section auth-section">
+      <div class="container">
+        <div class="auth-card auth-card--centered">
+          <div class="auth-zigzag"></div>
+
+          <svg class="auth-diamond" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="20" y="4" width="17" height="17" rx="2" transform="rotate(45 20 4)" stroke="var(--emerald)" stroke-width="2"/>
+            <rect x="20" y="11" width="9" height="9" rx="1" transform="rotate(45 20 11)" stroke="var(--emerald)" stroke-width="2"/>
+          </svg>
+
+          <h1 data-i18n="auth.welcomeBack">Welcome back</h1>
+          <p class="auth-subtitle" data-i18n="auth.loginSubtitle">Log in to your Halalincome account</p>
+
+          <p id="login-error" class="auth-error" style="display:none; color:#b3261e; font-size:0.9rem; margin-bottom: 8px;"></p>
+
+          <form id="login-form" class="auth-form">
+            <label>
+              <span data-i18n="auth.gmailLabel">Gmail address</span>
+              <input type="email" name="email" placeholder="you@gmail.com" required autocomplete="email" />
+            </label>
+            <label>
+              <span data-i18n="auth.passwordLabel">Password</span>
+              <input type="password" name="password" placeholder="Your password" required autocomplete="current-password" />
+            </label>
+            <button type="submit" class="btn btn-primary" data-i18n="auth.loginLinkText">Log in</button>
+          </form>
+
+          <form id="twofa-form" class="auth-form" style="display:none;">
+            <p style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 4px;">
+              This account has two-factor authentication turned on. Enter the 6-digit code from your authenticator app.
+            </p>
+            <label>
+              <span>Authenticator code</span>
+              <input type="text" name="code" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="123456" required autocomplete="one-time-code" />
+            </label>
+            <button type="submit" class="btn btn-primary">Verify and log in</button>
+          </form>
+
+          <p class="auth-switch" style="margin-top: 4px;">
+            <a href="forgot-password.html" data-i18n="auth.forgotPasswordLink">Forgot your password?</a>
+          </p>
+
+          <p class="auth-switch">
+            <span data-i18n="auth.noAccountPrompt">Don't have an account?</span>
+            <a href="signup.html" data-i18n="auth.createOneLink">Create one</a>
+          </p>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>© <span id="year"></span> Halal Income</span>
+      <span class="footer-disclaimer" data-i18n="footer.disclaimer">All investment carries risk. Figures shown are illustrative and not guaranteed.</span>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="auth.js"></script>
+  <script src="notifications-ui.js"></script>
+  <script src="i18n.js"></script>
+  <script src="i18n-extra2.js"></script>
+  <script>
+    const loginForm = document.getElementById("login-form");
+    const twofaForm = document.getElementById("twofa-form");
+    const errorEl = document.getElementById("login-error");
+
+    loginForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      errorEl.style.display = "none";
+
+      const form = e.target;
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: form.email.value, password: form.password.value }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to log in.");
+
+        if (data.requires2fa) {
+          loginForm.style.display = "none";
+          twofaForm.style.display = "grid";
+          twofaForm.code.focus();
+          return;
+        }
+
+        window.location.href = "balance.html";
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = "block";
+      }
+    });
+
+    twofaForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      errorEl.style.display = "none";
+
+      try {
+        const res = await fetch("/api/auth/2fa/verify-login", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: twofaForm.code.value }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Verification failed.");
+        window.location.href = "balance.html";
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>

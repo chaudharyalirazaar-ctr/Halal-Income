@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify profile — Halal Income</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">
+        <img src="logo.svg" alt="Halal Income logo" class="logo-mark" />
+        Halal Income
+      </a>
+      <input type="checkbox" id="nav-toggle" class="nav-toggle" />
+      <label for="nav-toggle" class="nav-burger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </label>
+      <nav class="main-nav">
+        <a href="how-it-works.html" data-i18n="nav.howItWorks">How it works</a>
+        <a href="invest.html" data-i18n="nav.invest">Invest</a>
+        <a href="about.html" data-i18n="nav.about">About</a>
+        <a href="analytics.html" data-i18n="nav.analytics">Analytics</a>
+        <a href="faq.html" data-i18n="nav.faq">FAQ</a>
+        <div class="profile-switch nav-loggedin-only">
+          <button type="button" id="profile-toggle" class="profile-btn" aria-haspopup="true" aria-expanded="false">
+            <span data-i18n="nav.myProfile">My profile</span> ▾
+          </button>
+          <div class="profile-menu" id="profile-menu">
+            <a href="referral.html" data-i18n="nav.referral">Referral</a>
+            <a href="balance.html" data-i18n="nav.balance">Balance</a>
+            <a href="verify.html" data-i18n="nav.verifyProfile">Verify profile</a>
+          </div>
+        </div>
+        <div class="lang-switch">
+          <button type="button" id="lang-toggle" class="lang-btn" aria-haspopup="true" aria-expanded="false">🌐 <span id="lang-current">EN</span></button>
+          <div class="lang-menu" id="lang-menu">
+            <button type="button" data-lang="en">English</button>
+            <button type="button" data-lang="ar">العربية</button>
+            <button type="button" data-lang="ur">اردو</button>
+            <button type="button" data-lang="hi">हिन्दी</button>
+            <button type="button" data-lang="bn">বাংলা</button>
+            <button type="button" data-lang="id">Bahasa Indonesia</button>
+            <button type="button" data-lang="tr">Türkçe</button>
+            <button type="button" data-lang="fa">فارسی</button>
+            <button type="button" data-lang="fr">Français</button>
+            <button type="button" data-lang="es">Español</button>
+            <button type="button" data-lang="sw">Kiswahili</button>
+            <button type="button" data-lang="zh">中文</button>
+            <button type="button" data-lang="ru">Русский</button>
+            <button type="button" data-lang="pt">Português</button>
+            <button type="button" data-lang="de">Deutsch</button>
+          </div>
+        </div>
+        <a href="login.html" class="nav-loggedout-only nav-login-link" data-i18n="nav.login">Log in</a>
+        <a href="signup.html" class="nav-cta nav-loggedout-only" data-i18n="nav.createAccount">Create account</a>
+        <button type="button" id="demo-login-toggle" class="demo-login-btn nav-loggedin-only">Log out (demo)</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <p class="eyebrow" data-i18n="verify.eyebrow">Account verification</p>
+        <h1 data-i18n="verify.title">Verify your profile</h1>
+
+        <div class="verify-grid">
+          <div class="verify-card" id="email-card">
+            <div class="verify-card-head">
+              <h3 data-i18n="verify.level1Title">Level 1 — Verify email</h3>
+              <span class="verify-status" id="email-status">Not verified</span>
+            </div>
+            <p data-i18n="verify.level1Body">Confirm you own the email address on your account.</p>
+
+            <button type="button" class="btn btn-primary btn-small" id="send-code-btn" data-i18n="verify.sendCode">Send verification code</button>
+
+            <form id="email-verify-form" style="display:none;">
+              <label style="display:grid; gap:6px; font-size:0.88rem; font-weight:600; margin-top:16px;">
+                <span data-i18n="verify.codeLabel">Enter the 6-digit code</span>
+                <input type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required
+                  style="font-family: var(--font-mono); font-size: 1.1rem; letter-spacing: 0.3em; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--sand); max-width: 180px;" />
+              </label>
+              <button type="submit" class="btn btn-ghost btn-small" style="margin-top:12px;" data-i18n="verify.verifyCode">Verify email</button>
+            </form>
+          </div>
+
+          <div class="verify-card" id="kyc-card">
+            <div class="verify-card-head">
+              <h3 data-i18n="verify.level2Title">Level 2 — Verify identity (KYC)</h3>
+              <span class="verify-status" id="kyc-status">Not verified</span>
+            </div>
+            <p data-i18n="verify.level2Body">Upload a government ID so we can confirm your identity.</p>
+
+            <p class="verify-locked-note" id="kyc-locked-note" data-i18n="verify.level2Locked">Complete email verification first.</p>
+
+            <form id="kyc-form" style="display:none;">
+              <label style="display:grid; gap:6px; font-size:0.88rem; font-weight:600;">
+                <span data-i18n="verify.uploadLabel">Government-issued ID</span>
+                <input type="file" accept="image/*,application/pdf" required />
+              </label>
+              <button type="submit" class="btn btn-ghost btn-small" style="margin-top:12px;" data-i18n="verify.submitKyc">Submit for review</button>
+            </form>
+          </div>
+        </div>
+
+        <p class="verify-notice">
+          Email codes are logged server-side rather than actually emailed until a mail provider is
+          configured (see backend/.env). KYC documents are reviewed manually by an admin before
+          identity verification is marked complete.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>© <span id="year"></span> Halal Income</span>
+      <span class="footer-disclaimer" data-i18n="footer.disclaimer">All investment carries risk. Figures shown are illustrative and not guaranteed.</span>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="auth.js"></script>
+  <script src="notifications-ui.js"></script>
+  <script src="i18n.js"></script>
+  <script src="i18n-extra2.js"></script>
+  <script src="verify.js"></script>
+</body>
+</html>

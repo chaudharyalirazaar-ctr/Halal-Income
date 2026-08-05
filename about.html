@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About — Halal Income</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">
+        <img src="logo.svg" alt="Halal Income logo" class="logo-mark" />
+        Halal Income
+      </a>
+      <input type="checkbox" id="nav-toggle" class="nav-toggle" />
+      <label for="nav-toggle" class="nav-burger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </label>
+      <nav class="main-nav">
+        <a href="how-it-works.html" data-i18n="nav.howItWorks">How it works</a>
+        <a href="invest.html" data-i18n="nav.invest">Invest</a>
+        <a href="about.html" data-i18n="nav.about">About</a>
+        <a href="analytics.html" data-i18n="nav.analytics">Analytics</a>
+        <a href="faq.html" data-i18n="nav.faq">FAQ</a>
+        <div class="profile-switch nav-loggedin-only">
+          <button type="button" id="profile-toggle" class="profile-btn" aria-haspopup="true" aria-expanded="false">
+            <span data-i18n="nav.myProfile">My profile</span> ▾
+          </button>
+          <div class="profile-menu" id="profile-menu">
+            <a href="referral.html" data-i18n="nav.referral">Referral</a>
+            <a href="balance.html" data-i18n="nav.balance">Balance</a>
+            <a href="verify.html" data-i18n="nav.verifyProfile">Verify profile</a>
+          </div>
+        </div>
+        <div class="lang-switch">
+          <button type="button" id="lang-toggle" class="lang-btn" aria-haspopup="true" aria-expanded="false">🌐 <span id="lang-current">EN</span></button>
+          <div class="lang-menu" id="lang-menu">
+            <button type="button" data-lang="en">English</button>
+            <button type="button" data-lang="ar">العربية</button>
+            <button type="button" data-lang="ur">اردو</button>
+            <button type="button" data-lang="hi">हिन्दी</button>
+            <button type="button" data-lang="bn">বাংলা</button>
+            <button type="button" data-lang="id">Bahasa Indonesia</button>
+            <button type="button" data-lang="tr">Türkçe</button>
+            <button type="button" data-lang="fa">فارسی</button>
+            <button type="button" data-lang="fr">Français</button>
+            <button type="button" data-lang="es">Español</button>
+            <button type="button" data-lang="sw">Kiswahili</button>
+            <button type="button" data-lang="zh">中文</button>
+            <button type="button" data-lang="ru">Русский</button>
+            <button type="button" data-lang="pt">Português</button>
+            <button type="button" data-lang="de">Deutsch</button>
+
+          </div>
+        </div>
+        <a href="login.html" class="nav-loggedout-only nav-login-link" data-i18n="nav.login">Log in</a>
+        <a href="signup.html" class="nav-cta nav-loggedout-only" data-i18n="nav.createAccount">Create account</a>
+        <button type="button" id="demo-login-toggle" class="demo-login-btn nav-loggedin-only">Log out (demo)</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container about-grid">
+        <div>
+          <p class="eyebrow" data-i18n="section.about.eyebrow">About the business</p>
+          <h1 data-i18n="section.about.title">A real manufacturing operation, run by people you can meet.</h1>
+          <!-- Placeholder copy — replace every paragraph below with your
+               client's real, specific company information before launch. -->
+          <p data-i18n="about.body1">Halal Income's capital is deployed into Pona Pharma, an operating pharmaceutical manufacturing business. This paragraph still needs the founding date and what it actually manufactures — generic or branded medicines, specific therapeutic categories, etc.</p>
+          <p data-i18n="about.body2">This paragraph should describe the facility itself: where it's located, its production capacity, and any relevant certifications (e.g. GMP compliance) that a prospective investor could independently verify.</p>
+          <p data-i18n="about.body3">This paragraph should introduce the people behind the business — the operator's background and relevant experience in manufacturing or pharmaceuticals. Specifics (names, years of experience, prior roles) build far more trust than general claims.</p>
+        </div>
+        <div class="about-facts">
+          <div class="fact"><span class="fact-num">—</span><span class="fact-label" data-i18n="about.fact1">Years operating<br><em>(add real figure)</em></span></div>
+          <div class="fact"><span class="fact-num">—</span><span class="fact-label" data-i18n="about.fact2">Products manufactured<br><em>(add real figure)</em></span></div>
+          <div class="fact"><span class="fact-num">—</span><span class="fact-label" data-i18n="about.fact3">Facility location<br><em>(add real location)</em></span></div>
+          <div class="fact"><span class="fact-num">—</span><span class="fact-label" data-i18n="about.fact4">Regulatory certifications<br><em>(add real detail)</em></span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>© <span id="year"></span> Halal Income</span>
+      <span class="footer-disclaimer" data-i18n="footer.disclaimer">All investment carries risk. Figures shown are illustrative and not guaranteed.</span>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="auth.js"></script>
+  <script src="notifications-ui.js"></script>
+  <script src="i18n.js"></script>
+  <script src="i18n-extra2.js"></script>
+</body>
+</html>

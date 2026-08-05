@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invest — Halal Income</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">
+        <img src="logo.svg" alt="Halal Income logo" class="logo-mark" />
+        Halal Income
+      </a>
+      <input type="checkbox" id="nav-toggle" class="nav-toggle" />
+      <label for="nav-toggle" class="nav-burger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </label>
+      <nav class="main-nav">
+        <a href="how-it-works.html" data-i18n="nav.howItWorks">How it works</a>
+        <a href="invest.html" data-i18n="nav.invest">Invest</a>
+        <a href="about.html" data-i18n="nav.about">About</a>
+        <a href="analytics.html" data-i18n="nav.analytics">Analytics</a>
+        <a href="faq.html" data-i18n="nav.faq">FAQ</a>
+        <div class="profile-switch nav-loggedin-only">
+          <button type="button" id="profile-toggle" class="profile-btn" aria-haspopup="true" aria-expanded="false">
+            <span data-i18n="nav.myProfile">My profile</span> ▾
+          </button>
+          <div class="profile-menu" id="profile-menu">
+            <a href="referral.html" data-i18n="nav.referral">Referral</a>
+            <a href="balance.html" data-i18n="nav.balance">Balance</a>
+            <a href="verify.html" data-i18n="nav.verifyProfile">Verify profile</a>
+          </div>
+        </div>
+        <div class="lang-switch">
+          <button type="button" id="lang-toggle" class="lang-btn" aria-haspopup="true" aria-expanded="false">🌐 <span id="lang-current">EN</span></button>
+          <div class="lang-menu" id="lang-menu">
+            <button type="button" data-lang="en">English</button>
+            <button type="button" data-lang="ar">العربية</button>
+            <button type="button" data-lang="ur">اردو</button>
+            <button type="button" data-lang="hi">हिन्दी</button>
+            <button type="button" data-lang="bn">বাংলা</button>
+            <button type="button" data-lang="id">Bahasa Indonesia</button>
+            <button type="button" data-lang="tr">Türkçe</button>
+            <button type="button" data-lang="fa">فارسی</button>
+            <button type="button" data-lang="fr">Français</button>
+            <button type="button" data-lang="es">Español</button>
+            <button type="button" data-lang="sw">Kiswahili</button>
+            <button type="button" data-lang="zh">中文</button>
+            <button type="button" data-lang="ru">Русский</button>
+            <button type="button" data-lang="pt">Português</button>
+            <button type="button" data-lang="de">Deutsch</button>
+          </div>
+        </div>
+        <a href="login.html" class="nav-loggedout-only nav-login-link" data-i18n="nav.login">Log in</a>
+        <a href="signup.html" class="nav-cta nav-loggedout-only" data-i18n="nav.createAccount">Create account</a>
+        <button type="button" id="demo-login-toggle" class="demo-login-btn nav-loggedin-only">Log out (demo)</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <p class="eyebrow" data-i18n="invest.eyebrow">Open for investment</p>
+        <h1 data-i18n="invest.title">Invest in an upcoming project</h1>
+        <p style="max-width: 60ch; opacity: 0.8;" data-i18n="invest.intro">
+          Submitting an amount below starts a request, not an instant transfer — our team reviews
+          and confirms every investment before it's added to your account, the same way it works
+          everywhere else on this site.
+        </p>
+
+        <div id="projects-list" class="projects-grid" style="margin-top: 32px;"></div>
+        <p id="projects-empty" class="admin-empty" style="display:none;">There are no projects open for investment right now — check back soon.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>© <span id="year"></span> Halal Income</span>
+      <span class="footer-disclaimer" data-i18n="footer.disclaimer">All investment carries risk. Figures shown are illustrative and not guaranteed.</span>
+    </div>
+  </footer>
+
+  <div class="invest-modal-overlay" id="invest-modal-overlay">
+    <div class="invest-modal">
+      <h3>Invest in <span id="invest-modal-project-title"></span></h3>
+      <p class="invest-modal-note">
+        This is deducted from your wallet balance, not a new payment — this still creates a request
+        for our team to review and confirm before it becomes a real investment.
+        Need to add funds first? <a href="balance.html">Deposit on your Balance page</a>.
+      </p>
+
+      <form id="invest-modal-form">
+        <label>
+          <span>Amount ($)</span>
+          <input type="number" name="amount" min="1" step="0.01" required />
+        </label>
+        <p id="invest-modal-error" class="auth-error" style="display:none; color:#b3261e; font-size:0.9rem;"></p>
+        <p id="invest-modal-deposit-link-wrap" style="display:none; margin-top:-6px;">
+          <a href="balance.html" class="btn btn-primary btn-small">Deposit funds</a>
+        </p>
+        <div class="invest-modal-actions">
+          <button type="button" class="btn btn-ghost" id="invest-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit investment request</button>
+        </div>
+      </form>
+
+      <div id="invest-modal-success" style="display:none;">
+        <p id="invest-modal-success-text"></p>
+        <button type="button" class="btn btn-primary" id="invest-modal-close-success">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script src="auth.js"></script>
+  <script src="notifications-ui.js"></script>
+  <script src="i18n.js"></script>
+  <script src="i18n-extra2.js"></script>
+  <script>
+    function money(n) {
+      return "$" + Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
+    }
+
+    function statusBadge(project) {
+      if (project.isOpen) return { label: "Open", cls: "project-badge--open" };
+      if (project.status === "closed") return { label: "Closed", cls: "project-badge--closed" };
+      if (project.remaining <= 0) return { label: "Fully funded", cls: "project-badge--funded" };
+      if (project.today > project.end_date) return { label: "Investment window ended", cls: "project-badge--closed" };
+      return { label: "Closed", cls: "project-badge--closed" };
+    }
+
+    function projectCard(project, loggedIn) {
+      const badge = statusBadge(project);
+      const card = document.createElement("div");
+      card.className = "project-card";
+
+      card.innerHTML =
+        `<div class="project-card-head">
+           <h3>${project.title}</h3>
+           <span class="project-badge ${badge.cls}">${badge.label}</span>
+         </div>
+         <p class="project-desc">${project.description || ""}</p>
+         <div class="project-progress-track">
+           <div class="project-progress-fill" style="width:${project.percent}%"></div>
+         </div>
+         <div class="project-stats">
+           <span>${money(project.raised)} raised</span>
+           <span>${money(project.remaining)} remaining</span>
+           <span>${project.percent}% funded</span>
+         </div>
+         <p class="project-dates">${project.start_date} → ${project.end_date}</p>
+         <div class="project-invest-area"></div>`;
+
+      const area = card.querySelector(".project-invest-area");
+
+      if (!project.isOpen) {
+        // Nothing more to render — the badge above already explains why.
+      } else if (!loggedIn) {
+        area.innerHTML = `<a href="login.html" class="btn btn-primary btn-small">Log in to invest</a>`;
+      } else {
+        const investBtn = document.createElement("button");
+        investBtn.type = "button";
+        investBtn.className = "btn btn-primary btn-small";
+        investBtn.textContent = "Invest";
+        investBtn.addEventListener("click", () => openInvestModal(project));
+        area.appendChild(investBtn);
+      }
+
+      return card;
+    }
+
+    // ---- Invest modal (shared across all project cards) --------------------
+
+    const overlay = document.getElementById("invest-modal-overlay");
+    const modalForm = document.getElementById("invest-modal-form");
+    const modalTitleEl = document.getElementById("invest-modal-project-title");
+    const modalError = document.getElementById("invest-modal-error");
+    const modalDepositLinkWrap = document.getElementById("invest-modal-deposit-link-wrap");
+    const modalSuccess = document.getElementById("invest-modal-success");
+    const modalSuccessText = document.getElementById("invest-modal-success-text");
+    let activeProjectId = null;
+
+    function openInvestModal(project) {
+      activeProjectId = project.id;
+      modalTitleEl.textContent = project.title;
+      modalForm.reset();
+      modalForm.style.display = "grid";
+      modalError.style.display = "none";
+      modalDepositLinkWrap.style.display = "none";
+      modalSuccess.style.display = "none";
+      overlay.classList.add("invest-modal-open");
+    }
+
+    function closeInvestModal() {
+      overlay.classList.remove("invest-modal-open");
+      activeProjectId = null;
+    }
+
+    document.getElementById("invest-modal-cancel").addEventListener("click", closeInvestModal);
+    document.getElementById("invest-modal-close-success").addEventListener("click", () => {
+      closeInvestModal();
+      loadProjects();
+    });
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeInvestModal();
+    });
+
+    modalForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      modalError.style.display = "none";
+      modalDepositLinkWrap.style.display = "none";
+
+      const submitBtn = modalForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+
+      try {
+        const res = await fetch(`/api/projects/${activeProjectId}/invest`, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: Number(modalForm.amount.value) }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Something went wrong.");
+
+        modalForm.style.display = "none";
+        modalSuccessText.textContent = data.message;
+        modalSuccess.style.display = "block";
+      } catch (err) {
+        modalError.textContent = err.message;
+        modalError.style.display = "block";
+        // The backend phrases this specific error as "$X of your balance is
+        // currently available" whenever the requested amount exceeds what's
+        // available (including a $0 balance) — surface a quick way to fix it.
+        if (/balance is currently available/i.test(err.message)) {
+          modalDepositLinkWrap.style.display = "block";
+        }
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    // ---- Loading & rendering the project list -------------------------------
+
+    let cachedLoggedIn = false;
+
+    async function loadProjects() {
+      const res = await fetch("/api/projects");
+      const { projects } = await res.json();
+
+      const list = document.getElementById("projects-list");
+      const emptyEl = document.getElementById("projects-empty");
+      list.innerHTML = "";
+
+      if (!projects.length) {
+        emptyEl.style.display = "block";
+        return;
+      }
+      emptyEl.style.display = "none";
+      projects.forEach((p) => list.appendChild(projectCard(p, cachedLoggedIn)));
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      const yearEl = document.getElementById("year");
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+      const user = await Auth.currentUser();
+      cachedLoggedIn = !!user;
+
+      loadProjects();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Balance — Halal Income</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">
+        <img src="logo.svg" alt="Halal Income logo" class="logo-mark" />
+        Halal Income
+      </a>
+      <input type="checkbox" id="nav-toggle" class="nav-toggle" />
+      <label for="nav-toggle" class="nav-burger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </label>
+      <nav class="main-nav">
+        <a href="how-it-works.html" data-i18n="nav.howItWorks">How it works</a>
+        <a href="invest.html" data-i18n="nav.invest">Invest</a>
+        <a href="about.html" data-i18n="nav.about">About</a>
+        <a href="analytics.html" data-i18n="nav.analytics">Analytics</a>
+        <a href="faq.html" data-i18n="nav.faq">FAQ</a>
+        <div class="profile-switch nav-loggedin-only">
+          <button type="button" id="profile-toggle" class="profile-btn" aria-haspopup="true" aria-expanded="false">
+            <span data-i18n="nav.myProfile">My profile</span> ▾
+          </button>
+          <div class="profile-menu" id="profile-menu">
+            <a href="referral.html" data-i18n="nav.referral">Referral</a>
+            <a href="balance.html" data-i18n="nav.balance">Balance</a>
+            <a href="verify.html" data-i18n="nav.verifyProfile">Verify profile</a>
+          </div>
+        </div>
+        <div class="lang-switch">
+          <button type="button" id="lang-toggle" class="lang-btn" aria-haspopup="true" aria-expanded="false">🌐 <span id="lang-current">EN</span></button>
+          <div class="lang-menu" id="lang-menu">
+            <button type="button" data-lang="en">English</button>
+            <button type="button" data-lang="ar">العربية</button>
+            <button type="button" data-lang="ur">اردو</button>
+            <button type="button" data-lang="hi">हिन्दी</button>
+            <button type="button" data-lang="bn">বাংলা</button>
+            <button type="button" data-lang="id">Bahasa Indonesia</button>
+            <button type="button" data-lang="tr">Türkçe</button>
+            <button type="button" data-lang="fa">فارسی</button>
+            <button type="button" data-lang="fr">Français</button>
+            <button type="button" data-lang="es">Español</button>
+            <button type="button" data-lang="sw">Kiswahili</button>
+            <button type="button" data-lang="zh">中文</button>
+            <button type="button" data-lang="ru">Русский</button>
+            <button type="button" data-lang="pt">Português</button>
+            <button type="button" data-lang="de">Deutsch</button>
+
+          </div>
+        </div>
+        <a href="login.html" class="nav-loggedout-only nav-login-link" data-i18n="nav.login">Log in</a>
+        <a href="signup.html" class="nav-cta nav-loggedout-only" data-i18n="nav.createAccount">Create account</a>
+        <button type="button" id="demo-login-toggle" class="demo-login-btn nav-loggedin-only">Log out (demo)</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+
+        <div id="logged-out-message" style="display:none;">
+          <p class="eyebrow" data-i18n="nav.balance">Balance</p>
+          <h1 data-i18n="balance.loginPrompt">Log in to see your investments</h1>
+          <p data-i18n="auth.loggedOutIntro">This page is only meaningful for a signed-in investor. Log in or create an account using the links in the navigation above to see your details.</p>
+        </div>
+
+        <div id="logged-in-content" style="display:none;">
+          <p class="eyebrow" data-i18n="nav.balance">Balance</p>
+          <h1 data-i18n="balance.title">Your balance</h1>
+
+          <div id="kyc-banner" class="kyc-banner" style="display:none;">
+            <span data-i18n="balance.kycRequiredBanner">KYC verification is required before you can withdraw funds.</span>
+            <a href="verify.html" data-i18n="balance.verifyNowLink">Verify now</a>
+          </div>
+
+          <div class="stat-cards" style="margin-top: 32px;">
+            <div class="stat-card">
+              <p class="stat-label">Wallet balance</p>
+              <p class="stat-value" id="bal-wallet">$0</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label" data-i18n="balance.statInvested">Total invested</p>
+              <p class="stat-value" id="bal-invested">$0</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label" data-i18n="balance.statClaimable">Profit available to claim</p>
+              <p class="stat-value" id="bal-claimable">$0</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label" data-i18n="balance.statWithdrawn">Already withdrawn</p>
+              <p class="stat-value" id="bal-withdrawn">$0</p>
+            </div>
+          </div>
+
+          <div class="admin-actions" style="margin-top: 20px; gap: 12px;">
+            <button type="button" class="btn btn-primary" id="open-deposit-modal">Deposit</button>
+            <button type="button" class="btn btn-ghost" id="open-withdraw-modal">Withdraw</button>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Your investments</h2>
+              <div class="admin-export-links">
+                <a href="/api/investments/export/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download statement (Excel)</a>
+                <a href="/api/investments/export/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download statement (PDF)</a>
+              </div>
+            </div>
+            <div class="table-card" style="margin-top: 12px; max-height: none;">
+              <table class="analytics-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="balance.colProject">Project</th>
+                    <th data-i18n="balance.colAmount">Amount invested</th>
+                    <th data-i18n="balance.colProfit">Profit this period</th>
+                    <th data-i18n="balance.colStatus">Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="balance-table-body"></tbody>
+              </table>
+            </div>
+            <p style="font-size: 0.85rem; opacity: 0.7; margin-top: 16px; max-width: 60ch;" data-i18n="balance.footnote">Claim moves that period's profit into your wallet balance, where you can invest it further or withdraw it.</p>
+          </div>
+
+          <div class="admin-section">
+            <h2>Recent deposits</h2>
+            <div class="table-card" style="margin-top: 12px; max-height: none;">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>Amount</th><th>Method</th><th>Status</th><th>Requested</th></tr>
+                </thead>
+                <tbody id="deposits-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <h2>Recent withdrawals</h2>
+            <div class="table-card" style="margin-top: 12px; max-height: none;">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>Amount</th><th>Status</th><th>Requested</th></tr>
+                </thead>
+                <tbody id="withdrawals-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>© <span id="year"></span> Halal Income</span>
+      <span class="footer-disclaimer" data-i18n="footer.disclaimer">All investment carries risk. Figures shown are illustrative and not guaranteed.</span>
+    </div>
+  </footer>
+
+  <div class="invest-modal-overlay" id="deposit-modal-overlay">
+    <div class="invest-modal">
+      <h3>Deposit funds</h3>
+      <p class="invest-modal-note">
+        This starts a request, not an instant transfer. Send your payment using one of the methods
+        below, then enter the transaction ID / reference number and upload proof (screenshot or
+        receipt) so our team can verify and add it to your balance.
+      </p>
+      <p class="invest-modal-instructions">
+        Payment instructions: replace this with your real bank/wallet details before publishing —
+        e.g. bank account number, or a USDT wallet address per network.
+      </p>
+
+      <form id="deposit-modal-form">
+        <label>
+          <span>Amount ($)</span>
+          <input type="number" name="amount" min="1" step="0.01" required />
+        </label>
+        <label>
+          <span>Payment method</span>
+          <select name="paymentMethod" required>
+            <option value="">Select a method</option>
+            <option value="bank_transfer">Bank transfer</option>
+            <option value="usdt_trc20">USDT (TRC20)</option>
+            <option value="usdt_bep20">USDT (BEP20)</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label>
+          <span>Transaction ID / reference number</span>
+          <input type="text" name="transactionId" required placeholder="e.g. bank reference or crypto transaction hash" />
+        </label>
+        <label>
+          <span>Payment proof (screenshot or receipt)</span>
+          <input type="file" name="proof" accept="image/*,application/pdf" required />
+        </label>
+        <p id="deposit-modal-error" class="auth-error" style="display:none; color:#b3261e; font-size:0.9rem;"></p>
+        <div class="invest-modal-actions">
+          <button type="button" class="btn btn-ghost" id="deposit-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit deposit request</button>
+        </div>
+      </form>
+
+      <div id="deposit-modal-success" style="display:none;">
+        <p id="deposit-modal-success-text"></p>
+        <button type="button" class="btn btn-primary" id="deposit-modal-close-success">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="invest-modal-overlay" id="withdraw-modal-overlay">
+    <div class="invest-modal">
+      <h3>Withdraw funds</h3>
+      <p class="invest-modal-note">
+        This submits a request — our team reviews and pays it out. Funds are not sent automatically.
+      </p>
+
+      <div id="withdraw-modal-kyc-locked" style="display:none;">
+        <p class="invest-modal-instructions">
+          Identity verification (KYC) is required before you can withdraw.
+          <a href="verify.html">Verify now</a>.
+        </p>
+        <div class="invest-modal-actions">
+          <button type="button" class="btn btn-ghost" id="withdraw-modal-cancel-locked">Close</button>
+        </div>
+      </div>
+
+      <form id="withdraw-modal-form">
+        <label>
+          <span>Amount ($)</span>
+          <input type="number" name="amount" min="30" step="0.01" required />
+        </label>
+        <p style="font-size: 0.8rem; opacity: 0.7; margin-top: -4px;">Minimum withdrawal: $30.</p>
+        <p id="withdraw-modal-error" class="auth-error" style="display:none; color:#b3261e; font-size:0.9rem;"></p>
+        <div class="invest-modal-actions">
+          <button type="button" class="btn btn-ghost" id="withdraw-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit withdrawal request</button>
+        </div>
+      </form>
+
+      <div id="withdraw-modal-success" style="display:none;">
+        <p id="withdraw-modal-success-text"></p>
+        <button type="button" class="btn btn-primary" id="withdraw-modal-close-success">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script src="auth.js"></script>
+  <script src="notifications-ui.js"></script>
+  <script src="i18n.js"></script>
+  <script src="i18n-extra2.js"></script>
+  <script src="balance.js"></script>
+</body>
+</html>

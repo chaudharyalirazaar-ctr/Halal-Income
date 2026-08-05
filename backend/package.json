@@ -1,0 +1,32 @@
+{
+  "name": "halal-income-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend API + static server for the Halal Income website",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed:admin": "node src/scripts/create-admin.js",
+    "test:lifecycle": "node src/scripts/test-lifecycle.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
+    "adm-zip": "^0.6.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.0",
+    "otplib": "^12.0.1",
+    "pdfkit": "^0.19.1",
+    "qrcode": "^1.5.4"
+  }
+}

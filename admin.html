@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin panel — Halal Income</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">
+        <img src="logo.svg" alt="Halal Income logo" class="logo-mark" />
+        Halal Income
+      </a>
+      <nav class="main-nav">
+        <span style="font-weight:600; opacity:0.7;">Admin panel</span>
+        <button type="button" id="admin-logout-btn" class="demo-login-btn" style="display:none;">Log out</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+
+        <div id="admin-denied" class="admin-denied" style="display:none;">
+          <p class="eyebrow">Restricted</p>
+          <h1>Admins only</h1>
+          <p style="opacity:0.75; margin-top:8px;">Log in with an admin account to see this page.</p>
+          <p style="margin-top:20px;"><a href="login.html" class="btn btn-primary">Log in</a></p>
+        </div>
+
+        <div id="admin-content" style="display:none;">
+          <p class="eyebrow">Operations</p>
+          <h1>Admin panel</h1>
+
+          <div class="admin-section">
+            <h2 style="margin-top:0;">Overview</h2>
+            <div class="stat-cards" id="analytics-stat-cards" style="margin-top:14px;">
+              <!-- filled by loadAnalytics() -->
+            </div>
+
+            <div style="margin-top:24px;">
+              <h3 style="margin:0 0 10px;">Deposits vs withdrawals — last 6 months</h3>
+              <div id="analytics-chart" style="overflow-x:auto;"></div>
+            </div>
+
+            <div style="margin-top:24px;">
+              <h3 style="margin:0 0 10px;">Project funding</h3>
+              <div class="table-card" style="max-height:none;">
+                <table class="analytics-table">
+                  <thead><tr><th>Project</th><th>Target</th><th>Raised</th><th>Progress</th><th>Status</th></tr></thead>
+                  <tbody id="analytics-projects-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Backup &amp; restore</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
+              A backup is a single .zip with everything: the full database (all users, investments,
+              deposits, withdrawals, projects, referrals) plus every uploaded file (KYC documents,
+              payment proofs). Download one regularly and keep it somewhere safe.
+            </p>
+            <p style="margin-top:14px;">
+              <a href="/api/admin/backup" class="btn btn-primary" download>Download full backup</a>
+            </p>
+
+            <div style="margin-top:26px; padding-top:20px; border-top:1px solid var(--sand);">
+              <h3 style="margin:0 0 6px;">Restore from backup</h3>
+              <p style="font-size:0.9rem; color:#b3261e; font-weight:600; max-width:65ch;">
+                Restoring replaces ALL current data on this site with whatever is in the file you
+                upload. This cannot be undone from here — anything created since that backup was
+                taken will be lost. (Your current data is auto-backed-up first as a safety net, but
+                don't rely on that instead of taking your own regular backups.)
+              </p>
+
+              <form id="restore-form" style="display:grid; gap:10px; max-width:480px; margin-top:12px;">
+                <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                  <span>Backup file (.zip)</span>
+                  <input type="file" name="backup" accept=".zip,application/zip" required />
+                </label>
+                <label style="display:flex; align-items:flex-start; gap:8px; font-size:0.85rem; font-weight:400;">
+                  <input type="checkbox" id="restore-confirm-checkbox" style="margin-top:3px;" />
+                  <span>I understand this will permanently replace all current data on this site.</span>
+                </label>
+                <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                  <span>Type RESTORE to confirm</span>
+                  <input type="text" id="restore-confirm-text" placeholder="RESTORE" autocomplete="off" />
+                </label>
+                <p id="restore-error" class="auth-error" style="display:none; color:#b3261e; font-size:0.9rem;"></p>
+                <p id="restore-success" style="display:none; color:var(--emerald); font-size:0.9rem;"></p>
+                <button type="submit" class="btn btn-danger" id="restore-submit-btn" disabled style="justify-self:start;">
+                  Restore and overwrite everything
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="admin-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Two-factor authentication</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
+              Adds a second step to logging in on this account — after your password, you'll also need a
+              6-digit code from an authenticator app (Google Authenticator, Authy, 1Password, etc.).
+              Strongly recommended for any admin account, since admins can approve deposits and withdrawals.
+            </p>
+
+            <div id="twofa-disabled-view">
+              <p id="twofa-status-text" style="margin-top:10px; font-weight:600;">Status: checking…</p>
+              <button type="button" class="btn btn-primary" id="twofa-start-setup-btn" style="margin-top:8px;">Enable 2FA</button>
+
+              <div id="twofa-setup-panel" style="display:none; margin-top:16px; max-width:420px;">
+                <p style="font-size:0.85rem;">1. Scan this QR code with your authenticator app (or enter the code manually).</p>
+                <img id="twofa-qr" alt="2FA QR code" style="max-width:200px; border:1px solid var(--sand); border-radius:8px;" />
+                <p style="font-size:0.8rem; word-break:break-all; opacity:0.7;" id="twofa-secret-text"></p>
+                <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600; margin-top:10px;">
+                  <span>2. Enter the 6-digit code it shows</span>
+                  <input type="text" id="twofa-enable-code" inputmode="numeric" maxlength="6" placeholder="123456" style="max-width:140px;" />
+                </label>
+                <p id="twofa-setup-error" style="display:none; color:#b3261e; font-size:0.85rem; margin-top:6px;"></p>
+                <button type="button" class="btn btn-primary" id="twofa-confirm-enable-btn" style="margin-top:10px;">Confirm and enable</button>
+              </div>
+            </div>
+
+            <div id="twofa-enabled-view" style="display:none;">
+              <p style="margin-top:10px; font-weight:600; color:var(--emerald);">✓ 2FA is enabled on your account.</p>
+              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600; max-width:260px; margin-top:10px;">
+                <span>Enter your password to disable</span>
+                <input type="password" id="twofa-disable-password" />
+              </label>
+              <p id="twofa-disable-error" style="display:none; color:#b3261e; font-size:0.85rem; margin-top:6px;"></p>
+              <button type="button" class="btn btn-danger" id="twofa-disable-btn" style="margin-top:10px;">Disable 2FA</button>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Projects</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/projects/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/projects/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+
+            <form id="new-project-form" class="admin-project-form">
+              <div class="admin-project-form-row">
+                <label>Title<input type="text" name="title" required /></label>
+                <label>Target amount ($)<input type="number" name="targetAmount" min="1" step="0.01" required /></label>
+              </div>
+              <label>Description<textarea name="description" rows="2"></textarea></label>
+              <div class="admin-project-form-row">
+                <label>Start date<input type="date" name="startDate" required /></label>
+                <label>End date<input type="date" name="endDate" required /></label>
+              </div>
+              <button type="submit" class="btn btn-primary btn-small">Create project</button>
+              <p id="new-project-error" class="auth-error" style="display:none; color:#b3261e; font-size:0.85rem; margin-top:6px;"></p>
+            </form>
+
+            <p class="admin-section-count" id="projects-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>Title</th><th>Target</th><th>Raised</th><th>Progress</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="projects-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Pending KYC verifications</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/kyc/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/kyc/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+            <p class="admin-section-count" id="kyc-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>User</th><th>Email</th><th>Submitted</th><th>Document</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="kyc-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Pending deposits</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/deposits/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/deposits/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+            <p class="admin-section-count" id="deposits-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>User</th><th>Email</th><th>Amount</th><th>Method</th><th>Transaction ID</th><th>Proof</th><th>Requested</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="deposits-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Pending withdrawal requests</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/withdrawals/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/withdrawals/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+            <p class="admin-section-count" id="withdrawals-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>User</th><th>Email</th><th>Amount</th><th>Requested</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="withdrawals-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Pending referral redemptions</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/redemptions/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/redemptions/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+            <p class="admin-section-count" id="redemptions-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>User</th><th>Email</th><th>Points</th><th>USDT</th><th>Requested</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="redemptions-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Pending investment requests</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/investment-requests/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/investment-requests/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+            <p class="admin-section-count" id="investment-requests-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>User</th><th>Email</th><th>KYC</th><th>Wallet Balance</th><th>Project</th><th>Amount</th><th>Requested</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="investment-requests-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>All users</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/users/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/users/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+            <p class="admin-section-count" id="users-count">Loading…</p>
+            <input
+              type="search"
+              id="users-search"
+              placeholder="Search by name or email…"
+              style="width:100%; max-width:320px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);"
+            />
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>Name</th><th>Email</th><th>Email verified</th><th>KYC status</th><th>Wallet Balance</th><th>Total withdrawn</th><th>Joined</th></tr>
+                </thead>
+                <tbody id="users-body"></tbody>
+              </table>
+            </div>
+            <div id="users-pager" style="display:flex; align-items:center; gap:10px; margin-top:12px; font-size:0.85rem;"></div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>© <span id="year"></span> Halal Income</span>
+      <span class="footer-disclaimer">Internal tool — not for public access.</span>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    function fmtDate(s) {
+      if (!s) return "—";
+      // SQLite stores "YYYY-MM-DD HH:MM:SS" in UTC; make that explicit for Date().
+      const d = new Date(s.replace(" ", "T") + "Z");
+      return isNaN(d) ? s : d.toLocaleString();
+    }
+
+    function money(n) {
+      return "$" + Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
+    }
+
+    async function api(path, options) {
+      const res = await fetch(path, { credentials: "same-origin", ...options });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Request failed.");
+      return data;
+    }
+
+    async function actOn(path, btn, onDone) {
+      const row = btn.closest("tr");
+      row.querySelectorAll("button").forEach((b) => (b.disabled = true));
+      try {
+        await api(path, { method: "POST" });
+        onDone();
+      } catch (err) {
+        alert(err.message);
+        row.querySelectorAll("button").forEach((b) => (b.disabled = false));
+      }
+    }
+
+    async function loadKyc() {
+      const { submissions } = await api("/api/admin/kyc/pending");
+      document.getElementById("kyc-count").textContent =
+        submissions.length ? submissions.length + " waiting for review" : "Nothing pending";
+      const body = document.getElementById("kyc-body");
+      body.innerHTML = "";
+      if (!submissions.length) {
+        body.innerHTML = '<tr><td colspan="5" class="admin-empty">No pending KYC submissions.</td></tr>';
+        return;
+      }
+      submissions.forEach((s) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+          `<td>${s.user_name}</td>` +
+          `<td>${s.user_email}</td>` +
+          `<td>${fmtDate(s.created_at)}</td>` +
+          `<td><a href="/api/admin/kyc/${s.id}/document" target="_blank" rel="noopener">View</a></td>` +
+          `<td class="admin-actions">
+             <button type="button" class="btn btn-primary btn-small" data-action="approve">Approve</button>
+             <button type="button" class="btn btn-danger btn-small" data-action="reject">Reject</button>
+           </td>`;
+        tr.querySelector('[data-action="approve"]').addEventListener("click", (e) =>
+          actOn(`/api/admin/kyc/${s.id}/approve`, e.target, () => { tr.remove(); loadKyc(); loadUsers(); })
+        );
+        tr.querySelector('[data-action="reject"]').addEventListener("click", (e) =>
+          actOn(`/api/admin/kyc/${s.id}/reject`, e.target, () => { tr.remove(); loadKyc(); loadUsers(); })
+        );
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadWithdrawals() {
+      const { withdrawals } = await api("/api/admin/withdrawals/pending");
+      document.getElementById("withdrawals-count").textContent =
+        withdrawals.length ? withdrawals.length + " waiting for payout" : "Nothing pending";
+      const body = document.getElementById("withdrawals-body");
+      body.innerHTML = "";
+      if (!withdrawals.length) {
+        body.innerHTML = '<tr><td colspan="5" class="admin-empty">No pending withdrawal requests.</td></tr>';
+        return;
+      }
+      withdrawals.forEach((w) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+          `<td>${w.user_name}</td>` +
+          `<td>${w.user_email}</td>` +
+          `<td>${money(w.amount)}</td>` +
+          `<td>${fmtDate(w.requested_at)}</td>` +
+          `<td class="admin-actions">
+             <button type="button" class="btn btn-primary btn-small" data-action="approve">Mark paid</button>
+             <button type="button" class="btn btn-danger btn-small" data-action="reject">Reject</button>
+           </td>`;
+        tr.querySelector('[data-action="approve"]').addEventListener("click", (e) =>
+          actOn(`/api/admin/withdrawals/${w.id}/approve`, e.target, () => { tr.remove(); loadWithdrawals(); loadUsers(); })
+        );
+        tr.querySelector('[data-action="reject"]').addEventListener("click", (e) =>
+          actOn(`/api/admin/withdrawals/${w.id}/reject`, e.target, () => { tr.remove(); loadWithdrawals(); })
+        );
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadRedemptions() {
+      const { redemptions } = await api("/api/admin/referral-redemptions/pending");
+      document.getElementById("redemptions-count").textContent =
+        redemptions.length ? redemptions.length + " waiting for payout" : "Nothing pending";
+      const body = document.getElementById("redemptions-body");
+      body.innerHTML = "";
+      if (!redemptions.length) {
+        body.innerHTML = '<tr><td colspan="6" class="admin-empty">No pending referral redemptions.</td></tr>';
+        return;
+      }
+      redemptions.forEach((r) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+          `<td>${r.user_name}</td>` +
+          `<td>${r.user_email}</td>` +
+          `<td>${r.points}</td>` +
+          `<td>${money(r.usdt_amount)}</td>` +
+          `<td>${fmtDate(r.requested_at)}</td>` +
+          `<td class="admin-actions">
+             <button type="button" class="btn btn-primary btn-small" data-action="approve">Mark paid</button>
+             <button type="button" class="btn btn-danger btn-small" data-action="reject">Reject</button>
+           </td>`;
+        tr.querySelector('[data-action="approve"]').addEventListener("click", (e) =>
+          actOn(`/api/admin/referral-redemptions/${r.id}/approve`, e.target, () => { tr.remove(); loadRedemptions(); })
+        );
+        tr.querySelector('[data-action="reject"]').addEventListener("click", (e) =>
+          actOn(`/api/admin/referral-redemptions/${r.id}/reject`, e.target, () => { tr.remove(); loadRedemptions(); })
+        );
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadAnalytics() {
+      const { totals, pending, monthly, projects } = await api("/api/admin/analytics");
+
+      const cards = document.getElementById("analytics-stat-cards");
+      cards.innerHTML = [
+        ["Total users", totals.total_users],
+        ["Total wallet balance", money(totals.total_wallet_balance)],
+        ["Total invested", money(totals.total_invested)],
+        ["Total deposited (lifetime)", money(totals.total_deposited)],
+        ["Total withdrawn (lifetime)", money(totals.total_withdrawn)],
+        ["Pending actions", pending.kyc + pending.deposits + pending.withdrawals + pending.investment_requests + pending.redemptions],
+      ]
+        .map(([label, value]) => `<div class="stat-card"><p class="stat-label">${label}</p><p class="stat-value">${value}</p></div>`)
+        .join("");
+
+      const chartEl = document.getElementById("analytics-chart");
+      const maxVal = Math.max(1, ...monthly.map((m) => Math.max(m.deposits, m.withdrawals)));
+      const barW = 28, gap = 14, groupGap = 28, chartH = 160, labelH = 28;
+      const groupW = barW * 2 + gap;
+      const svgW = monthly.length * (groupW + groupGap);
+      const bars = monthly
+        .map((m, i) => {
+          const x0 = i * (groupW + groupGap);
+          const depH = Math.round((m.deposits / maxVal) * chartH);
+          const witH = Math.round((m.withdrawals / maxVal) * chartH);
+          return `
+            <rect x="${x0}" y="${chartH - depH}" width="${barW}" height="${depH}" fill="var(--emerald)"><title>Deposits ${m.month}: ${money(m.deposits)}</title></rect>
+            <rect x="${x0 + barW + gap}" y="${chartH - witH}" width="${barW}" height="${witH}" fill="var(--gold, #C9A227)"><title>Withdrawals ${m.month}: ${money(m.withdrawals)}</title></rect>
+            <text x="${x0 + groupW / 2}" y="${chartH + 18}" text-anchor="middle" font-size="11" fill="var(--ink)">${m.month.slice(5)}</text>
+          `;
+        })
+        .join("");
+      chartEl.innerHTML = `
+        <svg viewBox="0 0 ${svgW} ${chartH + labelH}" width="${svgW}" height="${chartH + labelH}" style="max-width:100%;">
+          ${bars}
+        </svg>
+        <p style="font-size:0.8rem; opacity:0.7; margin-top:6px;">
+          <span style="color:var(--emerald); font-weight:700;">■</span> Deposits &nbsp;
+          <span style="color:var(--gold, #C9A227); font-weight:700;">■</span> Withdrawals
+        </p>
+      `;
+
+      const projBody = document.getElementById("analytics-projects-body");
+      projBody.innerHTML = projects.length
+        ? ""
+        : '<tr><td colspan="5" class="admin-empty">No projects yet.</td></tr>';
+      projects.forEach((p) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+          `<td>${p.title}</td><td>${money(p.target_amount)}</td><td>${money(p.raised)}</td>` +
+          `<td>${p.percent}%</td><td>${p.status}</td>`;
+        projBody.appendChild(tr);
+      });
+    }
+
+    async function loadProjects() {
+      const { projects } = await api("/api/admin/projects");
+      document.getElementById("projects-count").textContent = projects.length + " total";
+      const body = document.getElementById("projects-body");
+      body.innerHTML = "";
+      if (!projects.length) {
+        body.innerHTML = '<tr><td colspan="8" class="admin-empty">No projects yet — create one above.</td></tr>';
+        return;
+      }
+      projects.forEach((p) => {
+        const percent = p.target_amount > 0 ? Math.min(100, Math.round((p.raised / p.target_amount) * 100)) : 0;
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+          `<td>${p.title}</td>` +
+          `<td>${money(p.target_amount)}</td>` +
+          `<td>${money(p.raised)}</td>` +
+          `<td>${percent}%</td>` +
+          `<td>${p.start_date}</td>` +
+          `<td><input type="date" class="admin-date-input" value="${p.end_date}" /></td>` +
+          `<td>${p.status}</td>` +
+          `<td class="admin-actions">
+             <button type="button" class="btn btn-ghost btn-small" data-action="extend">Save date</button>
+             <button type="button" class="btn btn-ghost btn-small" data-action="toggle">${p.status === "open" ? "Close" : "Reopen"}</button>
+           </td>`;
+
+        tr.querySelector('[data-action="extend"]').addEventListener("click", async (e) => {
+          const newDate = tr.querySelector(".admin-date-input").value;
+          e.target.disabled = true;
+          try {
+            await api(`/api/admin/projects/${p.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ endDate: newDate }),
+            });
+            loadProjects();
+          } catch (err) {
+            alert(err.message);
+            e.target.disabled = false;
+          }
+        });
+
+        tr.querySelector('[data-action="toggle"]').addEventListener("click", async (e) => {
+          e.target.disabled = true;
+          try {
+            await api(`/api/admin/projects/${p.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: p.status === "open" ? "closed" : "open" }),
+            });
+            loadProjects();
+          } catch (err) {
+            alert(err.message);
+            e.target.disabled = false;
+          }
+        });
+
+        body.appendChild(tr);
+      });
+    }
+
+    document.getElementById("new-project-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const errorEl = document.getElementById("new-project-error");
+      errorEl.style.display = "none";
+
+      try {
+        await api("/api/admin/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: form.title.value,
+            description: form.description.value,
+            targetAmount: Number(form.targetAmount.value),
+            startDate: form.startDate.value,
+            endDate: form.endDate.value,
+          }),
+        });
+        form.reset();
+        loadProjects();
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = "block";
+      }
+    });
+
+    const PAYMENT_METHOD_LABELS = {
+      bank_transfer: "Bank transfer",
+      usdt_trc20: "USDT (TRC20)",
+      usdt_bep20: "USDT (BEP20)",
+      other: "Other",
+    };
+
+    async function loadDeposits() {
+      const { deposits } = await api("/api/admin/deposits/pending");
+      document.getElementById("deposits-count").textContent =
+        deposits.length ? deposits.length + " waiting for review" : "Nothing pending";
+      const body = document.getElementById("deposits-body");
+      body.innerHTML = "";
+      if (!deposits.length) {
+        body.innerHTML = '<tr><td colspan="8" class="admin-empty">No pending deposits.</td></tr>';
+        return;
+      }
+      deposits.forEach((d) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+          `<td>${d.user_name}</td>` +
+          `<td>${d.user_email}</td>` +
+          `<td>${money(d.amount)}</td>` +
+          `<td>${PAYMENT_METHOD_LABELS[d.payment_method] || d.payment_method}</td>` +
+          `<td>${d.transaction_id}</td>` +
+          `<td><a href="/api/admin/deposits/${d.id}/proof" target="_blank" rel="noopener">View</a></td>` +
+          `<td>${fmtDate(d.requested_at)}</td>` +
+          `<td class="admin-actions">
+             <button type="button" class="btn btn-primary btn-small" data-action="approve">Approve</button>
+             <button type="button" class="btn btn-danger btn-small" data-action="reject">Reject</button>
+           </td>`;
+        tr.querySelector('[data-action="approve"]').addEventListener("click", (e) =>
+          actOn(`/api/admin/deposits/${d.id}/approve`, e.target, () => { tr.remove(); loadDeposits(); loadUsers(); })
+        );
+        tr.querySelector('[data-action="reject"]').addEventListener("click", (e) =>
+          actOn(`/api/admin/deposits/${d.id}/reject`, e.target, () => { tr.remove(); loadDeposits(); })
+        );
+        body.appendChild(tr);
+      });
+    }
+
+    async function loadInvestmentRequests() {
+      const { requests } = await api("/api/admin/investment-requests/pending");
+      document.getElementById("investment-requests-count").textContent =
+        requests.length ? requests.length + " waiting for review" : "Nothing pending";
+      const body = document.getElementById("investment-requests-body");
+      body.innerHTML = "";
+      if (!requests.length) {
+        body.innerHTML = '<tr><td colspan="8" class="admin-empty">No pending investment requests.</td></tr>';
+        return;
+      }
+      requests.forEach((r) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+          `<td>${r.user_name}</td>` +
+          `<td>${r.user_email}</td>` +
+          `<td>${r.kyc_status}</td>` +
+          `<td>${money(r.wallet_balance)}</td>` +
+          `<td>${r.project_title}</td>` +
+          `<td>${money(r.amount)}</td>` +
+          `<td>${fmtDate(r.requested_at)}</td>` +
+          `<td class="admin-actions">
+             <button type="button" class="btn btn-primary btn-small" data-action="approve">Approve</button>
+             <button type="button" class="btn btn-danger btn-small" data-action="reject">Reject</button>
+           </td>`;
+        tr.querySelector('[data-action="approve"]').addEventListener("click", (e) =>
+          actOn(`/api/admin/investment-requests/${r.id}/approve`, e.target, () => { tr.remove(); loadInvestmentRequests(); loadProjects(); loadUsers(); })
+        );
+        tr.querySelector('[data-action="reject"]').addEventListener("click", (e) =>
+          actOn(`/api/admin/investment-requests/${r.id}/reject`, e.target, () => { tr.remove(); loadInvestmentRequests(); })
+        );
+        body.appendChild(tr);
+      });
+    }
+
+    const USERS_PAGE_SIZE = 25;
+    let allUsers = [];
+    let usersPage = 1;
+
+    function renderUsersPage() {
+      const query = document.getElementById("users-search").value.trim().toLowerCase();
+      const filtered = query
+        ? allUsers.filter((u) => u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query))
+        : allUsers;
+
+      document.getElementById("users-count").textContent =
+        query ? `${filtered.length} of ${allUsers.length} total` : `${allUsers.length} total`;
+
+      const totalPages = Math.max(1, Math.ceil(filtered.length / USERS_PAGE_SIZE));
+      usersPage = Math.min(usersPage, totalPages);
+      const start = (usersPage - 1) * USERS_PAGE_SIZE;
+      const pageRows = filtered.slice(start, start + USERS_PAGE_SIZE);
+
+      const body = document.getElementById("users-body");
+      body.innerHTML = pageRows.length
+        ? ""
+        : '<tr><td colspan="7" class="admin-empty">No users match that search.</td></tr>';
+      pageRows.forEach((u) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+          `<td>${u.name}${u.is_admin ? " (admin)" : ""}</td>` +
+          `<td>${u.email}</td>` +
+          `<td>${u.email_verified ? "Yes" : "No"}</td>` +
+          `<td>${u.kyc_status}</td>` +
+          `<td>${money(u.wallet_balance)}</td>` +
+          `<td>${money(u.total_withdrawn)}</td>` +
+          `<td>${fmtDate(u.created_at)}</td>`;
+        body.appendChild(tr);
+      });
+
+      const pager = document.getElementById("users-pager");
+      if (totalPages <= 1) {
+        pager.innerHTML = "";
+      } else {
+        pager.innerHTML =
+          `<button type="button" class="btn btn-ghost btn-small" id="users-prev-btn" ${usersPage <= 1 ? "disabled" : ""}>Previous</button>` +
+          `<span>Page ${usersPage} of ${totalPages}</span>` +
+          `<button type="button" class="btn btn-ghost btn-small" id="users-next-btn" ${usersPage >= totalPages ? "disabled" : ""}>Next</button>`;
+        const prevBtn = document.getElementById("users-prev-btn");
+        const nextBtn = document.getElementById("users-next-btn");
+        if (prevBtn) prevBtn.addEventListener("click", () => { usersPage--; renderUsersPage(); });
+        if (nextBtn) nextBtn.addEventListener("click", () => { usersPage++; renderUsersPage(); });
+      }
+    }
+
+    async function loadUsers() {
+      const { users } = await api("/api/admin/users");
+      allUsers = users;
+      usersPage = 1;
+      renderUsersPage();
+    }
+
+    function wireRestoreForm() {
+      const form = document.getElementById("restore-form");
+      const fileInput = form.querySelector('input[name="backup"]');
+      const checkbox = document.getElementById("restore-confirm-checkbox");
+      const textConfirm = document.getElementById("restore-confirm-text");
+      const submitBtn = document.getElementById("restore-submit-btn");
+      const errorEl = document.getElementById("restore-error");
+      const successEl = document.getElementById("restore-success");
+
+      function refreshSubmitState() {
+        const ready =
+          fileInput.files.length > 0 &&
+          checkbox.checked &&
+          textConfirm.value.trim() === "RESTORE";
+        submitBtn.disabled = !ready;
+      }
+
+      fileInput.addEventListener("change", refreshSubmitState);
+      checkbox.addEventListener("change", refreshSubmitState);
+      textConfirm.addEventListener("input", refreshSubmitState);
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorEl.style.display = "none";
+        successEl.style.display = "none";
+
+        const confirmed = window.confirm(
+          "This will permanently replace ALL current data on this site with the uploaded backup. " +
+            "This cannot be undone. Are you absolutely sure you want to continue?"
+        );
+        if (!confirmed) return;
+
+        submitBtn.disabled = true;
+        try {
+          const formData = new FormData();
+          formData.append("backup", fileInput.files[0]);
+          const res = await fetch("/api/admin/restore", {
+            method: "POST",
+            credentials: "same-origin",
+            body: formData,
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || "Restore failed.");
+
+          successEl.textContent = data.message;
+          successEl.style.display = "block";
+          form.reset();
+        } catch (err) {
+          errorEl.textContent = err.message;
+          errorEl.style.display = "block";
+        } finally {
+          refreshSubmitState();
+        }
+      });
+    }
+
+    async function wireTwoFactor() {
+      const disabledView = document.getElementById("twofa-disabled-view");
+      const enabledView = document.getElementById("twofa-enabled-view");
+      const statusText = document.getElementById("twofa-status-text");
+      const startBtn = document.getElementById("twofa-start-setup-btn");
+      const setupPanel = document.getElementById("twofa-setup-panel");
+      const qrImg = document.getElementById("twofa-qr");
+      const secretText = document.getElementById("twofa-secret-text");
+      const enableCodeInput = document.getElementById("twofa-enable-code");
+      const setupError = document.getElementById("twofa-setup-error");
+      const confirmBtn = document.getElementById("twofa-confirm-enable-btn");
+      const disablePasswordInput = document.getElementById("twofa-disable-password");
+      const disableError = document.getElementById("twofa-disable-error");
+      const disableBtn = document.getElementById("twofa-disable-btn");
+
+      async function refreshStatus() {
+        const { enabled } = await api("/api/auth/2fa/status");
+        disabledView.style.display = enabled ? "none" : "block";
+        enabledView.style.display = enabled ? "block" : "none";
+        if (!enabled) statusText.textContent = "Status: not enabled";
+      }
+
+      startBtn.addEventListener("click", async () => {
+        startBtn.disabled = true;
+        try {
+          const { secret, qrCodeDataUrl } = await api("/api/auth/2fa/setup", { method: "POST" });
+          qrImg.src = qrCodeDataUrl;
+          secretText.textContent = "Manual entry code: " + secret;
+          setupPanel.style.display = "block";
+        } catch (err) {
+          alert(err.message);
+        } finally {
+          startBtn.disabled = false;
+        }
+      });
+
+      confirmBtn.addEventListener("click", async () => {
+        setupError.style.display = "none";
+        confirmBtn.disabled = true;
+        try {
+          await api("/api/auth/2fa/enable", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: enableCodeInput.value }),
+          });
+          setupPanel.style.display = "none";
+          await refreshStatus();
+        } catch (err) {
+          setupError.textContent = err.message;
+          setupError.style.display = "block";
+        } finally {
+          confirmBtn.disabled = false;
+        }
+      });
+
+      disableBtn.addEventListener("click", async () => {
+        disableError.style.display = "none";
+        disableBtn.disabled = true;
+        try {
+          await api("/api/auth/2fa/disable", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: disablePasswordInput.value }),
+          });
+          disablePasswordInput.value = "";
+          await refreshStatus();
+        } catch (err) {
+          disableError.textContent = err.message;
+          disableError.style.display = "block";
+        } finally {
+          disableBtn.disabled = false;
+        }
+      });
+
+      refreshStatus();
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      const user = await Auth.currentUser();
+
+      if (!user || !user.is_admin) {
+        document.getElementById("admin-denied").style.display = "block";
+        return;
+      }
+
+      document.getElementById("admin-content").style.display = "block";
+      const logoutBtn = document.getElementById("admin-logout-btn");
+      logoutBtn.style.display = "inline-flex";
+      logoutBtn.addEventListener("click", () => Auth.logout());
+
+      wireRestoreForm();
+      wireTwoFactor();
+      document.getElementById("users-search").addEventListener("input", () => {
+        usersPage = 1;
+        renderUsersPage();
+      });
+      loadAnalytics();
+      loadProjects();
+      loadKyc();
+      loadDeposits();
+      loadWithdrawals();
+      loadRedemptions();
+      loadInvestmentRequests();
+      loadUsers();
+
+      const yearEl = document.getElementById("year");
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
+    });
+  </script>
+</body>
+</html>
