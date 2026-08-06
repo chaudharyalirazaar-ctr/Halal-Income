@@ -20,17 +20,22 @@ if (password.length < 8) {
 const existing = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
 
 if (existing) {
-  db.prepare("UPDATE users SET is_admin = 1, password_hash = ? WHERE id = ?")
+  // is_admin alone only satisfies requireAdmin — routes locked down further
+  // with requireRole("kyc_reviewer" / "finance_admin" / etc., see
+  // middleware/auth.js) also check the `role` column, so this needs setting
+  // explicitly too or a freshly seeded/promoted admin gets 403'd on backup
+  // downloads, KYC approvals, and every other role-gated action.
+  db.prepare("UPDATE users SET is_admin = 1, role = 'super_admin', password_hash = ? WHERE id = ?")
     .run(bcrypt.hashSync(password, 10), existing.id);
-  console.log(`Promoted existing user ${email} to admin and reset their password.`);
+  console.log(`Promoted existing user ${email} to super_admin and reset their password.`);
 } else {
   let code = generateReferralCode();
   while (db.prepare("SELECT 1 FROM users WHERE referral_code = ?").get(code)) {
     code = generateReferralCode();
   }
   db.prepare(`
-    INSERT INTO users (name, email, password_hash, dob, is_admin, email_verified, kyc_status, referral_code)
-    VALUES ('Admin', ?, ?, '1990-01-01', 1, 1, 'verified', ?)
+    INSERT INTO users (name, email, password_hash, dob, is_admin, role, email_verified, kyc_status, referral_code)
+    VALUES ('Admin', ?, ?, '1990-01-01', 1, 'super_admin', 1, 'verified', ?)
   `).run(email, bcrypt.hashSync(password, 10), code);
-  console.log(`Created admin account for ${email}.`);
+  console.log(`Created super_admin account for ${email}.`);
 }
