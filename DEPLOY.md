@@ -58,21 +58,33 @@ and logins will silently fail in production.
 
 ## Option A — Railway or Render (recommended, least setup)
 
-Both platforms auto-detect this repo, run `npm install` inside `backend/`,
-and start it with the `Procfile` / start script at the repo root.
+`package.json` lives in `backend/`, not the repo root, so both platforms need
+to be told that explicitly — otherwise their build step won't find a Node
+app to install/run at all.
 
 1. Push this repo to a GitHub repo (private is fine).
 2. Create a new project on [Railway](https://railway.app) or
    [Render](https://render.com) and connect that GitHub repo.
-3. Set the environment variables from the table above in the platform's
+3. **Set the Root Directory to `backend`** (Railway: Service → Settings →
+   "Root Directory"; Render: set during the "New Web Service" wizard, or
+   Settings → "Root Directory" afterward). This makes the platform run
+   `npm install` and `npm start` from inside `backend/`, which is what its
+   `package.json` expects.
+4. Set the environment variables from the table above in the platform's
    dashboard.
-4. **Attach a persistent volume** mounted at `/app/backend/data` (Railway:
-   "Volumes" tab; Render: "Disks" tab, under the service's Settings).
-5. Deploy. Once it's live, SSH/shell into the running instance (both
-   platforms have a "Shell" tab) and run:
+5. **Attach a persistent volume/disk** mounted at the absolute path where
+   `backend/data/` ends up on disk — commonly `/app/backend/data` on
+   Railway's default Nixpacks builder, but confirm the real path yourself:
+   open the platform's Shell tab after the first deploy and run
+   `pwd && ls backend/data` (or just `pwd` if you set Root Directory, in
+   which case the mount path is `/app/data` relative to that root — check
+   which one matches what you see). Railway: "Volumes" tab; Render: "Disks"
+   tab, under the service's Settings.
+6. Deploy. Once it's live, use the platform's Shell tab and run:
    ```bash
-   cd backend && npm run seed:admin
+   npm run seed:admin
    ```
+   (no `cd backend` needed if Root Directory is already set to `backend`)
    to create your first admin account.
 6. Attach your custom domain in the platform's dashboard if you have one.
 
