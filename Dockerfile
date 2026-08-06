@@ -27,7 +27,12 @@ ENV NODE_ENV=production
 # `docker run` testing).
 EXPOSE 3000
 
-VOLUME ["/app/backend/data"]
+# NOTE: no `VOLUME` instruction here — Railway's Dockerfile builder rejects
+# it outright ("docker VOLUME ... is not supported, use Railway Volumes").
+# Persistent storage for this path is instead configured through the host's
+# own volume/disk feature (Railway: "Volumes" tab; Render: "Disks" tab;
+# plain Docker: the `-v` flag) — see DEPLOY.md. The directory still needs to
+# exist and be writable at /app/backend/data regardless of which host you use.
 
 WORKDIR /app/backend
 CMD ["node", "src/server.js"]
