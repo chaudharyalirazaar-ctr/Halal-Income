@@ -58,35 +58,45 @@ and logins will silently fail in production.
 
 ## Option A — Railway or Render (recommended, least setup)
 
-`package.json` lives in `backend/`, not the repo root, so both platforms need
-to be told that explicitly — otherwise their build step won't find a Node
-app to install/run at all.
+**Do NOT set "Root Directory" to `backend`.** It's tempting since
+`package.json` lives there, but this app is unusual: `backend/src/server.js`
+reaches *up* to serve the static site (`index.html`, `styles.css`, etc.) from
+the folder above it. Root Directory scopes the platform's build to only see
+files inside that folder — set it to `backend` and the site's HTML/CSS/JS
+become invisible to the build, so you get a working API but `Cannot GET /`
+on every page. Leave Root Directory **blank** (repo root).
+
+Both platforms can auto-detect a Node app from `package.json` and may try to
+use that instead of the `Dockerfile` at the repo root — for this repo's
+layout, the Dockerfile is what actually works, so make sure it's selected
+explicitly:
 
 1. Push this repo to a GitHub repo (private is fine).
 2. Create a new project on [Railway](https://railway.app) or
    [Render](https://render.com) and connect that GitHub repo.
-3. **Set the Root Directory to `backend`** (Railway: Service → Settings →
-   "Root Directory"; Render: set during the "New Web Service" wizard, or
-   Settings → "Root Directory" afterward). This makes the platform run
-   `npm install` and `npm start` from inside `backend/`, which is what its
-   `package.json` expects.
-4. Set the environment variables from the table above in the platform's
+3. Leave **Root Directory** blank/unset.
+4. **Explicitly select the Dockerfile builder** — Railway: Service →
+   Settings → "Build" section → "Builder" → change from "Railpack"/"Nixpacks"
+   to **Dockerfile** (Dockerfile Path: `/Dockerfile`). Render: choose
+   **"Docker"** as the environment/runtime when creating the service instead
+   of "Node".
+5. Set the environment variables from the table above in the platform's
    dashboard.
-5. **Attach a persistent volume/disk** mounted at the absolute path where
-   `backend/data/` ends up on disk — commonly `/app/backend/data` on
-   Railway's default Nixpacks builder, but confirm the real path yourself:
-   open the platform's Shell tab after the first deploy and run
-   `pwd && ls backend/data` (or just `pwd` if you set Root Directory, in
-   which case the mount path is `/app/data` relative to that root — check
-   which one matches what you see). Railway: "Volumes" tab; Render: "Disks"
-   tab, under the service's Settings.
-6. Deploy. Once it's live, use the platform's Shell tab and run:
+6. **Attach a persistent volume/disk** mounted at `/app/backend/data` — that
+   exact path is guaranteed by this repo's `Dockerfile` (see its `WORKDIR`/
+   `VOLUME` lines), so no need to guess or inspect the running container.
+   Railway: "Volumes" tab; Render: "Disks" tab, under the service's Settings.
+7. Trigger a **fresh** deployment (push a new commit, or use whatever action
+   creates a brand-new deployment — on Railway specifically, "Redeploy" on an
+   *existing* deployment entry replays that deployment's original build
+   recipe and will ignore a builder change you made after it was built; only
+   a genuinely new deployment picks up the current builder setting).
+8. Once it's live, use the platform's Shell/Console tab and run:
    ```bash
-   npm run seed:admin
+   cd backend && npm run seed:admin
    ```
-   (no `cd backend` needed if Root Directory is already set to `backend`)
    to create your first admin account.
-6. Attach your custom domain in the platform's dashboard if you have one.
+9. Attach your custom domain in the platform's dashboard if you have one.
 
 ## Option B — Docker on any VPS (DigitalOcean, Hetzner, AWS EC2, etc.)
 
