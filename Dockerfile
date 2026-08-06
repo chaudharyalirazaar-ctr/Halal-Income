@@ -21,7 +21,10 @@ RUN cd backend && npm install --omit=dev
 COPY . .
 
 ENV NODE_ENV=production
-ENV PORT=3000
+# PORT is intentionally NOT set here — the host (Railway, Render, etc.)
+# injects its own at runtime, and server.js already falls back to 3000
+# via `process.env.PORT || 3000` if nothing is injected (e.g. local
+# `docker run` testing).
 EXPOSE 3000
 
 VOLUME ["/app/backend/data"]
