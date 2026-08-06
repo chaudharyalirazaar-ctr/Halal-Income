@@ -34,6 +34,17 @@ process.on("uncaughtException", (err) => {
 const app = express();
 const siteRoot = path.join(__dirname, "..", "..");
 
+// Trust the first proxy hop (Railway's edge / any single reverse proxy in
+// front of this app) so req.ip reflects the real client IP from
+// X-Forwarded-For. Without this, Express ignores that header by default,
+// and express-rate-limit (used throughout this app) throws a validation
+// error on every rate-limited request once it detects a forwarded-for
+// header it wasn't told to trust — in production this manifested as
+// requests to rate-limited routes (login, deposits, admin actions, the
+// backup download, etc.) hanging instead of completing. Harmless locally
+// (no proxy in front of it there, so the header is simply absent).
+app.set("trust proxy", 1);
+
 app.disable("x-powered-by");
 app.use(express.json());
 app.use(cookieParser());
