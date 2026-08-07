@@ -107,7 +107,7 @@ async function main() {
 
   console.log("1. Signup");
   const signupRes = await user.post("/api/auth/signup", {
-    json: { name: "Lifecycle Test", email: testEmail, dob: "1990-01-01", password: testPassword },
+    json: { name: "Lifecycle Test", email: testEmail, phone: "+15551234567", dob: "1990-01-01", password: testPassword },
   });
   assert(signupRes.ok, "signup succeeds");
   assert(signupRes.data.user.email === testEmail, "signup returns the new user");

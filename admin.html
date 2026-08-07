@@ -281,13 +281,13 @@
             <input
               type="search"
               id="users-search"
-              placeholder="Search by name or email…"
+              placeholder="Search by name, email, or phone…"
               style="width:100%; max-width:320px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);"
             />
             <div class="table-card">
               <table class="analytics-table">
                 <thead>
-                  <tr><th>Name</th><th>Email</th><th>Email verified</th><th>KYC status</th><th>Wallet Balance</th><th>Total withdrawn</th><th>Joined</th></tr>
+                  <tr><th>Name</th><th>Email</th><th>Phone</th><th>Email verified</th><th>KYC status</th><th>Wallet Balance</th><th>Total withdrawn</th><th>Joined</th></tr>
                 </thead>
                 <tbody id="users-body"></tbody>
               </table>
@@ -732,7 +732,12 @@
     function renderUsersPage() {
       const query = document.getElementById("users-search").value.trim().toLowerCase();
       const filtered = query
-        ? allUsers.filter((u) => u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query))
+        ? allUsers.filter(
+            (u) =>
+              u.name.toLowerCase().includes(query) ||
+              u.email.toLowerCase().includes(query) ||
+              (u.phone || "").toLowerCase().includes(query)
+          )
         : allUsers;
 
       document.getElementById("users-count").textContent =
@@ -746,12 +751,13 @@
       const body = document.getElementById("users-body");
       body.innerHTML = pageRows.length
         ? ""
-        : '<tr><td colspan="7" class="admin-empty">No users match that search.</td></tr>';
+        : '<tr><td colspan="8" class="admin-empty">No users match that search.</td></tr>';
       pageRows.forEach((u) => {
         const tr = document.createElement("tr");
         tr.innerHTML =
           `<td>${u.name}${u.is_admin ? " (admin)" : ""}</td>` +
           `<td>${u.email}</td>` +
+          `<td>${u.phone || "—"}</td>` +
           `<td>${u.email_verified ? "Yes" : "No"}</td>` +
           `<td>${u.kyc_status}</td>` +
           `<td>${money(u.wallet_balance)}</td>` +

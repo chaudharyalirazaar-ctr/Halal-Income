@@ -753,6 +753,7 @@ const extraStrings5 = {
   en: { "auth.newInvestorApplication": "New investor application", "auth.stepIndicator": "Step 1 of 4",
     "auth.accountDetails": "Account details", "auth.fullNameHelper": "As it appears on your ID",
     "auth.gmailLabel": "Gmail address", "auth.gmailHelper": "Used to verify your inbox",
+    "auth.phoneLabel": "Phone number", "auth.phoneHelper": "Include your country code",
     "auth.dobLabel": "Date of birth", "auth.dobHelper": "Must be 18 or older",
     "auth.passwordHelper": "At least 8 characters", "auth.declarationLabel": "Declaration",
     "auth.declarationText": "I confirm the information above is accurate and I agree to the Terms of Service and Risk Disclosure.",

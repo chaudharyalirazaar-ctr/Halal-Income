@@ -32,10 +32,14 @@ const forgotPasswordLimiter = rateLimit({
 });
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Loose on purpose — accepts international formats (+, spaces, dashes,
+// parentheses) without pinning to one country's numbering plan. Just makes
+// sure there are enough digits to plausibly be a real phone number.
+const PHONE_RE = /^[+\d][\d\s()-]{6,19}$/;
 
 const insertUser = db.prepare(`
-  INSERT INTO users (name, email, password_hash, dob, referral_code, referred_by)
-  VALUES (@name, @email, @password_hash, @dob, @referral_code, @referred_by)
+  INSERT INTO users (name, email, password_hash, dob, phone, referral_code, referred_by)
+  VALUES (@name, @email, @password_hash, @dob, @phone, @referral_code, @referred_by)
 `);
 const getUserByEmail = db.prepare("SELECT * FROM users WHERE email = ?");
 const getUserByReferralCode = db.prepare("SELECT * FROM users WHERE referral_code = ?");
@@ -57,13 +61,16 @@ function isAdult(dobStr) {
 }
 
 router.post("/signup", (req, res) => {
-  const { name, email, dob, password, referralCode } = req.body || {};
+  const { name, email, dob, phone, password, referralCode } = req.body || {};
 
-  if (!name || !email || !dob || !password) {
-    return res.status(400).json({ error: "Name, email, date of birth, and password are all required." });
+  if (!name || !email || !dob || !phone || !password) {
+    return res.status(400).json({ error: "Name, email, phone number, date of birth, and password are all required." });
   }
   if (!EMAIL_RE.test(email)) {
     return res.status(400).json({ error: "Enter a valid email address." });
+  }
+  if (!PHONE_RE.test(String(phone).trim())) {
+    return res.status(400).json({ error: "Enter a valid phone number." });
   }
   if (String(password).length < 8) {
     return res.status(400).json({ error: "Password must be at least 8 characters." });
@@ -90,6 +97,7 @@ router.post("/signup", (req, res) => {
     email: email.toLowerCase(),
     password_hash: passwordHash,
     dob,
+    phone: String(phone).trim(),
     referral_code: code,
     referred_by: referredBy,
   });

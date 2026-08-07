@@ -94,6 +94,12 @@
             </label>
 
             <label>
+              <span class="auth-label-row"><span data-i18n="auth.phoneLabel">Phone number</span><span class="required">*</span></span>
+              <input type="tel" name="phone" placeholder="+1 555 123 4567" required autocomplete="tel" />
+              <span class="auth-field-helper" data-i18n="auth.phoneHelper">Include your country code</span>
+            </label>
+
+            <label>
               <span class="auth-label-row"><span data-i18n="auth.dobLabel">Date of birth</span><span class="required">*</span></span>
               <input type="date" name="dob" required />
               <span class="auth-field-helper" data-i18n="auth.dobHelper">Must be 18 or older</span>
@@ -156,6 +162,7 @@
           body: JSON.stringify({
             name: form.name.value,
             email: form.email.value,
+            phone: form.phone.value,
             dob: form.dob.value,
             password: form.password.value,
             referralCode,

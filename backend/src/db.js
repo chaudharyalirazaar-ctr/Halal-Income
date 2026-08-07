@@ -248,6 +248,12 @@ if (!userColumns.some((c) => c.name === "permissions")) {
   ).run();
 }
 
+// Phone number, collected at signup. Nullable so existing accounts created
+// before this migration aren't broken by a NOT NULL default.
+if (!userColumns.some((c) => c.name === "phone")) {
+  db.exec("ALTER TABLE users ADD COLUMN phone TEXT");
+}
+
 // Rejection reasons — every reject action on these five queues can now
 // carry an admin-written explanation the affected user sees, so a mistaken
 // or disputed rejection is something they can actually understand and

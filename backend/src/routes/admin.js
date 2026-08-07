@@ -30,7 +30,7 @@ const sensitiveActionLimiter = rateLimit({
 // ---- Users -----------------------------------------------------------
 
 const listUsers = db.prepare(`
-  SELECT id, name, email, is_admin, role, permissions, email_verified, kyc_status, referral_code, wallet_balance, total_withdrawn, created_at
+  SELECT id, name, email, phone, is_admin, role, permissions, email_verified, kyc_status, referral_code, wallet_balance, total_withdrawn, created_at
   FROM users ORDER BY created_at DESC
 `);
 const getUserByIdForRole = db.prepare("SELECT * FROM users WHERE id = ?");
@@ -857,6 +857,7 @@ const EXPORTS = {
       { header: "ID", key: "id", width: 8 },
       { header: "Name", key: "name", width: 22 },
       { header: "Email", key: "email", width: 28 },
+      { header: "Phone", key: "phone", width: 18 },
       { header: "Admin", key: "is_admin", width: 10 },
       { header: "Email Verified", key: "email_verified", width: 14 },
       { header: "KYC Status", key: "kyc_status", width: 14 },
