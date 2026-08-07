@@ -35,6 +35,18 @@ async function renderVerifyPage() {
   kycStatusEl.textContent = t(`verify.status.${status.kyc}`, kycLabel);
   kycStatusEl.className = "verify-status " + (status.kyc === "verified" ? "verify-status--done" : "verify-status--pending");
 
+  const reasonEl = document.getElementById("kyc-rejection-reason");
+  if (reasonEl) {
+    if (status.kyc === "rejected") {
+      reasonEl.textContent = status.kycRejectionReason
+        ? `Rejected: ${status.kycRejectionReason}. Please resubmit below.`
+        : "Your submission was rejected. Please resubmit a clear photo or scan of a valid ID below.";
+      reasonEl.style.display = "block";
+    } else {
+      reasonEl.style.display = "none";
+    }
+  }
+
   if (status.email) {
     kycCard.classList.remove("verify-card--locked");
     kycLockedNote.style.display = "none";

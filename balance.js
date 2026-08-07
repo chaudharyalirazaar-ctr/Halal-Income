@@ -81,10 +81,13 @@ async function renderBalancePage() {
     : '<tr><td colspan="4" class="admin-empty">No deposits yet.</td></tr>';
   deposits.forEach((d) => {
     const tr = document.createElement("tr");
+    const statusCell = d.status === "rejected" && d.rejection_reason
+      ? `${d.status}<br/><span style="font-size:0.78rem; opacity:0.75;">Reason: ${d.rejection_reason}</span>`
+      : d.status;
     tr.innerHTML =
       `<td>$${d.amount.toLocaleString()}</td>` +
       `<td>${PAYMENT_METHOD_LABELS[d.payment_method] || d.payment_method}</td>` +
-      `<td>${d.status}</td>` +
+      `<td>${statusCell}</td>` +
       `<td>${fmtDate(d.requested_at)}</td>`;
     depositsBody.appendChild(tr);
   });
@@ -96,9 +99,12 @@ async function renderBalancePage() {
     : '<tr><td colspan="3" class="admin-empty">No withdrawals yet.</td></tr>';
   withdrawals.forEach((w) => {
     const tr = document.createElement("tr");
+    const statusCell = w.status === "rejected" && w.rejection_reason
+      ? `${w.status}<br/><span style="font-size:0.78rem; opacity:0.75;">Reason: ${w.rejection_reason}</span>`
+      : w.status;
     tr.innerHTML =
       `<td>$${w.amount.toLocaleString()}</td>` +
-      `<td>${w.status}</td>` +
+      `<td>${statusCell}</td>` +
       `<td>${fmtDate(w.requested_at)}</td>`;
     withdrawalsBody.appendChild(tr);
   });

@@ -295,6 +295,40 @@
             <div id="users-pager" style="display:flex; align-items:center; gap:10px; margin-top:12px; font-size:0.85rem;"></div>
           </div>
 
+          <div class="admin-section" id="team-permissions-section" style="display:none; border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Team &amp; permissions</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:70ch;">
+              Give trusted people just the access they need to help run the site — a KYC reviewer, a
+              withdrawals approver, a project manager, or someone who can see everything but approve
+              nothing. Check "Super admin" for full access instead (including managing everyone else's
+              access, backups, and the audit log). Only super admins can see or use this section.
+            </p>
+            <input
+              type="search"
+              id="team-search"
+              placeholder="Search by name or email…"
+              style="width:100%; max-width:320px; margin:12px 0; padding:8px 12px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);"
+            />
+            <div class="table-card">
+              <table class="analytics-table" id="team-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Super admin</th>
+                    <th>Approve<br/>KYC</th>
+                    <th>Approve<br/>deposits</th>
+                    <th>Approve<br/>withdrawals</th>
+                    <th>Approve<br/>investments</th>
+                    <th>Approve<br/>redemptions</th>
+                    <th>Manage<br/>projects</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="team-body"></tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>
@@ -340,6 +374,30 @@
       }
     }
 
+    // Same as actOn, but first prompts for a reason the affected user will
+    // see (in their notification/email) so a rejection isn't just a silent
+    // no — they know what to fix before resubmitting. Cancelling the prompt
+    // aborts the rejection entirely; an empty reason is allowed (submits as
+    // no reason given) since not every rejection needs an explanation.
+    async function rejectWithReason(path, btn, onDone) {
+      const reason = window.prompt("Reason for rejection (the user will see this — leave blank if none):", "");
+      if (reason === null) return;
+
+      const row = btn.closest("tr");
+      row.querySelectorAll("button").forEach((b) => (b.disabled = true));
+      try {
+        await api(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: reason.trim() }),
+        });
+        onDone();
+      } catch (err) {
+        alert(err.message);
+        row.querySelectorAll("button").forEach((b) => (b.disabled = false));
+      }
+    }
+
     async function loadKyc() {
       const { submissions } = await api("/api/admin/kyc/pending");
       document.getElementById("kyc-count").textContent =
@@ -365,7 +423,7 @@
           actOn(`/api/admin/kyc/${s.id}/approve`, e.target, () => { tr.remove(); loadKyc(); loadUsers(); })
         );
         tr.querySelector('[data-action="reject"]').addEventListener("click", (e) =>
-          actOn(`/api/admin/kyc/${s.id}/reject`, e.target, () => { tr.remove(); loadKyc(); loadUsers(); })
+          rejectWithReason(`/api/admin/kyc/${s.id}/reject`, e.target, () => { tr.remove(); loadKyc(); loadUsers(); })
         );
         body.appendChild(tr);
       });
@@ -396,7 +454,7 @@
           actOn(`/api/admin/withdrawals/${w.id}/approve`, e.target, () => { tr.remove(); loadWithdrawals(); loadUsers(); })
         );
         tr.querySelector('[data-action="reject"]').addEventListener("click", (e) =>
-          actOn(`/api/admin/withdrawals/${w.id}/reject`, e.target, () => { tr.remove(); loadWithdrawals(); })
+          rejectWithReason(`/api/admin/withdrawals/${w.id}/reject`, e.target, () => { tr.remove(); loadWithdrawals(); })
         );
         body.appendChild(tr);
       });
@@ -428,7 +486,7 @@
           actOn(`/api/admin/referral-redemptions/${r.id}/approve`, e.target, () => { tr.remove(); loadRedemptions(); })
         );
         tr.querySelector('[data-action="reject"]').addEventListener("click", (e) =>
-          actOn(`/api/admin/referral-redemptions/${r.id}/reject`, e.target, () => { tr.remove(); loadRedemptions(); })
+          rejectWithReason(`/api/admin/referral-redemptions/${r.id}/reject`, e.target, () => { tr.remove(); loadRedemptions(); })
         );
         body.appendChild(tr);
       });
@@ -610,7 +668,7 @@
           actOn(`/api/admin/deposits/${d.id}/approve`, e.target, () => { tr.remove(); loadDeposits(); loadUsers(); })
         );
         tr.querySelector('[data-action="reject"]').addEventListener("click", (e) =>
-          actOn(`/api/admin/deposits/${d.id}/reject`, e.target, () => { tr.remove(); loadDeposits(); })
+          rejectWithReason(`/api/admin/deposits/${d.id}/reject`, e.target, () => { tr.remove(); loadDeposits(); })
         );
         body.appendChild(tr);
       });
@@ -644,7 +702,7 @@
           actOn(`/api/admin/investment-requests/${r.id}/approve`, e.target, () => { tr.remove(); loadInvestmentRequests(); loadProjects(); loadUsers(); })
         );
         tr.querySelector('[data-action="reject"]').addEventListener("click", (e) =>
-          actOn(`/api/admin/investment-requests/${r.id}/reject`, e.target, () => { tr.remove(); loadInvestmentRequests(); })
+          rejectWithReason(`/api/admin/investment-requests/${r.id}/reject`, e.target, () => { tr.remove(); loadInvestmentRequests(); })
         );
         body.appendChild(tr);
       });
@@ -705,6 +763,91 @@
       allUsers = users;
       usersPage = 1;
       renderUsersPage();
+    }
+
+    const TEAM_PERMISSIONS = [
+      { key: "approve_kyc", label: "Approve KYC" },
+      { key: "approve_deposits", label: "Approve deposits" },
+      { key: "approve_withdrawals", label: "Approve withdrawals" },
+      { key: "approve_investments", label: "Approve investments" },
+      { key: "approve_redemptions", label: "Approve redemptions" },
+      { key: "manage_projects", label: "Manage projects" },
+    ];
+
+    function renderTeamRow(u) {
+      const tr = document.createElement("tr");
+      tr.dataset.userId = u.id;
+      const permSet = new Set(u.permissions || []);
+      const isSuper = u.role === "super_admin";
+
+      const permCells = TEAM_PERMISSIONS
+        .map(
+          (p) =>
+            `<td style="text-align:center;"><input type="checkbox" class="team-perm-checkbox" data-perm="${p.key}" ${permSet.has(p.key) ? "checked" : ""} /></td>`
+        )
+        .join("");
+
+      tr.innerHTML =
+        `<td>${u.name}<br/><span style="opacity:0.65; font-size:0.8rem;">${u.email}</span></td>` +
+        `<td style="text-align:center;"><input type="checkbox" class="team-super-checkbox" ${isSuper ? "checked" : ""} /></td>` +
+        permCells +
+        `<td><button type="button" class="btn btn-primary btn-small team-save-btn">Save</button></td>`;
+
+      const superCheckbox = tr.querySelector(".team-super-checkbox");
+      const permCheckboxes = [...tr.querySelectorAll(".team-perm-checkbox")];
+
+      function syncPermDisabledState() {
+        // Super admin implies every permission — disable the individual
+        // checkboxes while it's checked so the row isn't lying about what
+        // will actually be saved.
+        permCheckboxes.forEach((cb) => (cb.disabled = superCheckbox.checked));
+      }
+      superCheckbox.addEventListener("change", syncPermDisabledState);
+      syncPermDisabledState();
+
+      tr.querySelector(".team-save-btn").addEventListener("click", async (e) => {
+        const btn = e.target;
+        btn.disabled = true;
+        try {
+          const isSuperAdmin = superCheckbox.checked;
+          const permissions = isSuperAdmin
+            ? []
+            : permCheckboxes.filter((cb) => cb.checked).map((cb) => cb.dataset.perm);
+          const { user } = await api(`/api/admin/users/${u.id}/permissions`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isSuperAdmin, permissions }),
+          });
+          const idx = allUsers.findIndex((x) => x.id === u.id);
+          if (idx !== -1) allUsers[idx] = user;
+          btn.textContent = "Saved ✓";
+          setTimeout(() => (btn.textContent = "Save"), 1500);
+        } catch (err) {
+          alert(err.message);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      return tr;
+    }
+
+    function renderTeamTable() {
+      const query = document.getElementById("team-search").value.trim().toLowerCase();
+      const filtered = query
+        ? allUsers.filter((u) => u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query))
+        : allUsers;
+
+      const body = document.getElementById("team-body");
+      body.innerHTML = "";
+      filtered.forEach((u) => body.appendChild(renderTeamRow(u)));
+    }
+
+    async function loadTeamPermissions() {
+      // allUsers is populated by loadUsers(), called just before this in
+      // DOMContentLoaded — reuse it rather than fetching a second time.
+      renderTeamTable();
+      document.getElementById("team-search").addEventListener("input", renderTeamTable);
     }
 
     function wireRestoreForm() {
@@ -866,7 +1009,16 @@
       loadWithdrawals();
       loadRedemptions();
       loadInvestmentRequests();
-      loadUsers();
+
+      // Team & permissions is super-admin only — hidden entirely for anyone
+      // else, since the backend would 403 every action in it anyway.
+      if (user.role === "super_admin") {
+        document.getElementById("team-permissions-section").style.display = "block";
+        await loadUsers();
+        loadTeamPermissions();
+      } else {
+        loadUsers();
+      }
 
       const yearEl = document.getElementById("year");
       if (yearEl) yearEl.textContent = new Date().getFullYear();

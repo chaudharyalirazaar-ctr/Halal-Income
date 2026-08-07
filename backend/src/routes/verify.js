@@ -60,11 +60,19 @@ const insertKyc = db.prepare(`
   INSERT INTO kyc_submissions (user_id, file_path, original_name) VALUES (?, ?, ?)
 `);
 const setKycPending = db.prepare("UPDATE users SET kyc_status = 'pending' WHERE id = ?");
+const getLatestKycSubmission = db.prepare(`
+  SELECT status, rejection_reason, created_at FROM kyc_submissions
+  WHERE user_id = ? ORDER BY id DESC LIMIT 1
+`);
 
 router.get("/status", requireAuth, (req, res) => {
+  const latestKyc = getLatestKycSubmission.get(req.user.id);
   res.json({
     email: !!req.user.email_verified,
     kyc: req.user.kyc_status,
+    // Only meaningful when kyc is 'rejected' — the reason the admin gave, if
+    // they wrote one, so the user knows what to fix before resubmitting.
+    kycRejectionReason: latestKyc && latestKyc.status === "rejected" ? latestKyc.rejection_reason : null,
   });
 });
 

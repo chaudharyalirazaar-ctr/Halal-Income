@@ -58,11 +58,11 @@ const insertDeposit = db.prepare(`
   VALUES (?, ?, ?, ?, ?, ?)
 `);
 const listOwnDeposits = db.prepare(`
-  SELECT id, amount, payment_method, transaction_id, status, requested_at, processed_at
+  SELECT id, amount, payment_method, transaction_id, status, rejection_reason, requested_at, processed_at
   FROM deposit_requests WHERE user_id = ? ORDER BY requested_at DESC
 `);
 const listOwnWithdrawals = db.prepare(`
-  SELECT id, amount, status, requested_at, processed_at
+  SELECT id, amount, status, rejection_reason, requested_at, processed_at
   FROM withdrawal_requests WHERE user_id = ? ORDER BY requested_at DESC
 `);
 const insertWithdrawal = db.prepare(`

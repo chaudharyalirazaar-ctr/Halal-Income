@@ -216,16 +216,54 @@ if (!userColumns.some((c) => c.name === "two_factor_enabled")) {
 
 // Multi-admin roles, layered on top of the existing is_admin flag rather than
 // replacing it (requireAdmin still just checks is_admin, so nothing that
-// worked before this migration changes behavior). role narrows what an admin
-// can do: super_admin (everything, incl. managing other admins' roles),
-// kyc_reviewer (KYC queue only), finance_admin (deposits/withdrawals/
-// investment-requests/backup-restore), or 'none' for non-admin users.
+// worked before this migration changes behavior). From here on, `role` only
+// distinguishes super_admin (everything, incl. managing other admins'
+// access) from everyone else ('none') — granular capabilities for
+// non-super admins live in the `permissions` column added below instead of
+// as fixed role names, so an owner can compose exactly the access each
+// helper needs (e.g. "KYC review only" or "withdrawals + KYC" or "project
+// manager") rather than picking from a short fixed list.
 // Existing admins are grandfathered in as super_admin so nobody loses access
 // when this migration first runs.
 if (!userColumns.some((c) => c.name === "role")) {
   db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'none'");
   db.exec("UPDATE users SET role = 'super_admin' WHERE is_admin = 1");
 }
+
+// Granular per-admin capabilities (JSON array of strings, e.g.
+// '["approve_kyc","approve_withdrawals"]'). super_admin bypasses this
+// entirely (has every capability implicitly) — see requirePermission() in
+// middleware/auth.js. Backfills the two earlier fixed roles
+// (kyc_reviewer/finance_admin, from before this column existed) into their
+// equivalent permission sets so nobody's access silently narrows when this
+// migration first runs, then resets `role` on those rows to 'none' since
+// granular permissions are now the source of truth for non-super admins.
+if (!userColumns.some((c) => c.name === "permissions")) {
+  db.exec("ALTER TABLE users ADD COLUMN permissions TEXT NOT NULL DEFAULT '[]'");
+  db.prepare(
+    `UPDATE users SET permissions = '["approve_kyc"]', role = 'none' WHERE role = 'kyc_reviewer'`
+  ).run();
+  db.prepare(
+    `UPDATE users SET permissions = '["approve_deposits","approve_withdrawals","approve_investments","approve_redemptions"]', role = 'none' WHERE role = 'finance_admin'`
+  ).run();
+}
+
+// Rejection reasons — every reject action on these five queues can now
+// carry an admin-written explanation the affected user sees, so a mistaken
+// or disputed rejection is something they can actually understand and
+// resubmit against instead of a silent no.
+[
+  ["kyc_submissions", "rejection_reason"],
+  ["deposit_requests", "rejection_reason"],
+  ["withdrawal_requests", "rejection_reason"],
+  ["investment_requests", "rejection_reason"],
+  ["referral_redemptions", "rejection_reason"],
+].forEach(([table, column]) => {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!cols.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`);
+  }
+});
 
 function generateReferralCode() {
   return crypto.randomBytes(4).toString("hex").toUpperCase();

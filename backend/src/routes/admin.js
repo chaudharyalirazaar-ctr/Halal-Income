@@ -3,7 +3,7 @@ const path = require("node:path");
 const multer = require("multer");
 const rateLimit = require("express-rate-limit");
 const { db } = require("../db");
-const { requireAdmin, requireRole } = require("../middleware/auth");
+const { requireAdmin, requireRole, requirePermission, parsePermissions } = require("../middleware/auth");
 const { sendXlsx, sendPdf } = require("../lib/exporters");
 const { createBackupZip, restoreFromZip } = require("../lib/backup");
 const { sendEmail, layout } = require("../lib/mailer");
@@ -30,35 +30,67 @@ const sensitiveActionLimiter = rateLimit({
 // ---- Users -----------------------------------------------------------
 
 const listUsers = db.prepare(`
-  SELECT id, name, email, is_admin, role, email_verified, kyc_status, referral_code, wallet_balance, total_withdrawn, created_at
+  SELECT id, name, email, is_admin, role, permissions, email_verified, kyc_status, referral_code, wallet_balance, total_withdrawn, created_at
   FROM users ORDER BY created_at DESC
 `);
 const getUserByIdForRole = db.prepare("SELECT * FROM users WHERE id = ?");
-const setUserRole = db.prepare("UPDATE users SET role = ?, is_admin = ? WHERE id = ?");
+const setUserAccess = db.prepare("UPDATE users SET role = ?, permissions = ?, is_admin = ? WHERE id = ?");
+
+function userWithParsedPermissions(u) {
+  return u ? { ...u, permissions: parsePermissions(u) } : u;
+}
 
 router.get("/users", (req, res) => {
-  res.json({ users: listUsers.all() });
+  res.json({ users: listUsers.all().map(userWithParsedPermissions) });
 });
 
-const VALID_ROLES = ["none", "kyc_reviewer", "finance_admin", "super_admin"];
+// Every capability that can be granted to a non-super admin individually.
+// "Team & permissions" in admin.html composes these into whatever mix an
+// owner wants for a given helper — a KYC-only reviewer, a withdrawals
+// approver, a project manager, someone who can see everything but approve
+// nothing, or any combination.
+const VALID_PERMISSIONS = [
+  "approve_kyc",
+  "approve_deposits",
+  "approve_withdrawals",
+  "approve_investments",
+  "approve_redemptions",
+  "manage_projects",
+];
 
-// Only super_admin can grant/change admin roles — this is the one action in
-// the whole panel that can create another admin, so it's the most locked-down.
-router.patch("/users/:id/role", requireRole(), (req, res) => {
-  const { role } = req.body || {};
-  if (!VALID_ROLES.includes(role)) {
-    return res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(", ")}` });
-  }
+// Only super_admin can grant/change another admin's access — this is the
+// one action in the whole panel that can create another admin, so it's the
+// most locked-down. isSuperAdmin grants everything implicitly and ignores
+// whatever specific permissions were also sent; otherwise is_admin is
+// derived from whether any permission was granted at all (a plain admin
+// with zero permissions can still view every admin page — that's the
+// "sees all data, approves nothing" role — but isn't flagged as an admin
+// at all unless they have at least one permission or super_admin).
+router.patch("/users/:id/permissions", requireRole(), (req, res) => {
+  const { isSuperAdmin, permissions, canViewOnly } = req.body || {};
   const target = getUserByIdForRole.get(req.params.id);
   if (!target) return res.status(404).json({ error: "User not found." });
-  if (target.id === req.user.id && role !== "super_admin") {
-    return res.status(400).json({ error: "You can't demote your own account. Have another super admin do it." });
+
+  const requestedPermissions = Array.isArray(permissions) ? permissions : [];
+  const invalid = requestedPermissions.filter((p) => !VALID_PERMISSIONS.includes(p));
+  if (invalid.length) {
+    return res.status(400).json({ error: `Unknown permission(s): ${invalid.join(", ")}` });
   }
 
-  const isAdmin = role === "none" ? 0 : 1;
-  setUserRole.run(role, isAdmin, target.id);
-  logAction(req.user.id, "user.role_change", "user", target.id, { from: target.role, to: role });
-  res.json({ user: listUsers.all().find((u) => u.id === target.id) });
+  if (target.id === req.user.id && !isSuperAdmin) {
+    return res.status(400).json({ error: "You can't remove your own super admin access. Have another super admin do it." });
+  }
+
+  const role = isSuperAdmin ? "super_admin" : "none";
+  const finalPermissions = isSuperAdmin ? [] : requestedPermissions;
+  const isAdmin = isSuperAdmin || finalPermissions.length > 0 || !!canViewOnly ? 1 : 0;
+
+  setUserAccess.run(role, JSON.stringify(finalPermissions), isAdmin, target.id);
+  logAction(req.user.id, "user.access_change", "user", target.id, {
+    from: { role: target.role, permissions: parsePermissions(target) },
+    to: { role, permissions: finalPermissions, isAdmin: !!isAdmin },
+  });
+  res.json({ user: userWithParsedPermissions(listUsers.all().find((u) => u.id === target.id)) });
 });
 
 // ---- KYC review --------------------------------------------------------
@@ -71,7 +103,7 @@ const listPendingKyc = db.prepare(`
 `);
 const getKycSubmission = db.prepare("SELECT * FROM kyc_submissions WHERE id = ?");
 const setKycSubmissionStatus = db.prepare(`
-  UPDATE kyc_submissions SET status = ?, reviewed_by = ?, reviewed_at = datetime('now') WHERE id = ?
+  UPDATE kyc_submissions SET status = ?, rejection_reason = ?, reviewed_by = ?, reviewed_at = datetime('now') WHERE id = ?
 `);
 const setUserKycStatus = db.prepare("UPDATE users SET kyc_status = ? WHERE id = ?");
 
@@ -85,11 +117,11 @@ router.get("/kyc/:id/document", (req, res) => {
   res.sendFile(path.join(dataDir, submission.file_path));
 });
 
-router.post("/kyc/:id/approve", requireRole("kyc_reviewer"), (req, res) => {
+router.post("/kyc/:id/approve", requirePermission("approve_kyc"), (req, res) => {
   const submission = getKycSubmission.get(req.params.id);
   if (!submission) return res.status(404).json({ error: "Submission not found." });
 
-  setKycSubmissionStatus.run("verified", req.user.id, submission.id);
+  setKycSubmissionStatus.run("verified", null, req.user.id, submission.id);
   setUserKycStatus.run("verified", submission.user_id);
 
   const user = getUserById.get(submission.user_id);
@@ -109,23 +141,32 @@ router.post("/kyc/:id/approve", requireRole("kyc_reviewer"), (req, res) => {
   res.json({ ok: true });
 });
 
-router.post("/kyc/:id/reject", requireRole("kyc_reviewer"), (req, res) => {
+router.post("/kyc/:id/reject", requirePermission("approve_kyc"), (req, res) => {
   const submission = getKycSubmission.get(req.params.id);
   if (!submission) return res.status(404).json({ error: "Submission not found." });
 
-  setKycSubmissionStatus.run("rejected", req.user.id, submission.id);
+  const reason = req.body && req.body.reason ? String(req.body.reason).trim().slice(0, 1000) : null;
+  setKycSubmissionStatus.run("rejected", reason, req.user.id, submission.id);
   setUserKycStatus.run("rejected", submission.user_id);
 
   const user = getUserById.get(submission.user_id);
-  logAction(req.user.id, "kyc.reject", "kyc_submission", submission.id, { user_id: submission.user_id });
-  notify(submission.user_id, "kyc_rejected", "Your identity verification (KYC) was rejected. Please resubmit.", "/verify.html");
+  logAction(req.user.id, "kyc.reject", "kyc_submission", submission.id, { user_id: submission.user_id, reason });
+  notify(
+    submission.user_id,
+    "kyc_rejected",
+    reason
+      ? `Your identity verification (KYC) was rejected: ${reason}. You can resubmit on the Verify page.`
+      : "Your identity verification (KYC) was rejected. Please resubmit.",
+    "/verify.html"
+  );
   if (user) {
     sendEmail({
       to: user.email,
       subject: "Your identity verification needs another look",
       html: layout(
         "KYC verification rejected",
-        `<p>Your identity verification document couldn't be approved. Please log in and resubmit a clear photo or scan of a valid government-issued ID.</p>`
+        `<p>Your identity verification document couldn't be approved.${reason ? ` Reason: <strong>${reason}</strong>.` : ""}</p>
+         <p>Please log in and resubmit a clear photo or scan of a valid government-issued ID.</p>`
       ),
     });
   }
@@ -184,7 +225,7 @@ const listPendingWithdrawals = db.prepare(`
 `);
 const getWithdrawal = db.prepare("SELECT * FROM withdrawal_requests WHERE id = ?");
 const setWithdrawalStatus = db.prepare(`
-  UPDATE withdrawal_requests SET status = ?, processed_at = datetime('now'), processed_by = ? WHERE id = ?
+  UPDATE withdrawal_requests SET status = ?, rejection_reason = ?, processed_at = datetime('now'), processed_by = ? WHERE id = ?
 `);
 const addToTotalWithdrawn = db.prepare("UPDATE users SET total_withdrawn = total_withdrawn + ? WHERE id = ?");
 const refundInvestmentProfit = db.prepare(`
@@ -197,7 +238,7 @@ router.get("/withdrawals/pending", (req, res) => {
   res.json({ withdrawals: listPendingWithdrawals.all() });
 });
 
-router.post("/withdrawals/:id/approve", requireRole("finance_admin"), sensitiveActionLimiter, (req, res) => {
+router.post("/withdrawals/:id/approve", requirePermission("approve_withdrawals"), sensitiveActionLimiter, (req, res) => {
   const w = getWithdrawal.get(req.params.id);
   if (!w) return res.status(404).json({ error: "Withdrawal request not found." });
   if (w.status !== "pending") return res.status(400).json({ error: "Already processed." });
@@ -216,7 +257,7 @@ router.post("/withdrawals/:id/approve", requireRole("finance_admin"), sensitiveA
     deductWalletBalance.run(w.amount, w.user_id);
   }
 
-  setWithdrawalStatus.run("paid", req.user.id, w.id);
+  setWithdrawalStatus.run("paid", null, req.user.id, w.id);
   addToTotalWithdrawn.run(w.amount, w.user_id);
 
   logAction(req.user.id, "withdrawal.approve", "withdrawal_request", w.id, { user_id: w.user_id, amount: w.amount });
@@ -233,22 +274,33 @@ router.post("/withdrawals/:id/approve", requireRole("finance_admin"), sensitiveA
   res.json({ ok: true, message: "Marked paid. Actually sending funds still has to happen outside this app." });
 });
 
-router.post("/withdrawals/:id/reject", requireRole("finance_admin"), sensitiveActionLimiter, (req, res) => {
+router.post("/withdrawals/:id/reject", requirePermission("approve_withdrawals"), sensitiveActionLimiter, (req, res) => {
   const w = getWithdrawal.get(req.params.id);
   if (!w) return res.status(404).json({ error: "Withdrawal request not found." });
   if (w.status !== "pending") return res.status(400).json({ error: "Already processed." });
 
-  setWithdrawalStatus.run("rejected", req.user.id, w.id);
+  const reason = req.body && req.body.reason ? String(req.body.reason).trim().slice(0, 1000) : null;
+  setWithdrawalStatus.run("rejected", reason, req.user.id, w.id);
   if (w.investment_id) refundInvestmentProfit.run(w.amount, w.investment_id);
 
-  logAction(req.user.id, "withdrawal.reject", "withdrawal_request", w.id, { user_id: w.user_id, amount: w.amount });
-  notify(w.user_id, "withdrawal_rejected", `Your withdrawal request of $${w.amount} was rejected.`, "/balance.html");
+  logAction(req.user.id, "withdrawal.reject", "withdrawal_request", w.id, { user_id: w.user_id, amount: w.amount, reason });
+  notify(
+    w.user_id,
+    "withdrawal_rejected",
+    reason
+      ? `Your withdrawal request of $${w.amount} was rejected: ${reason}. You can submit a new request from your Balance page.`
+      : `Your withdrawal request of $${w.amount} was rejected.`,
+    "/balance.html"
+  );
   const payee = getUserById.get(w.user_id);
   if (payee) {
     sendEmail({
       to: payee.email,
       subject: "Your withdrawal request was rejected",
-      html: layout("Withdrawal rejected", `<p>Your withdrawal request of <strong>$${w.amount}</strong> was rejected. Contact our team if you have questions.</p>`),
+      html: layout(
+        "Withdrawal rejected",
+        `<p>Your withdrawal request of <strong>$${w.amount}</strong> was rejected.${reason ? ` Reason: <strong>${reason}</strong>.` : ""} Contact our team if you have questions, or submit a new request from your Balance page.</p>`
+      ),
     });
   }
 
@@ -265,19 +317,19 @@ const listPendingRedemptions = db.prepare(`
 `);
 const getRedemption = db.prepare("SELECT * FROM referral_redemptions WHERE id = ?");
 const setRedemptionStatus = db.prepare(`
-  UPDATE referral_redemptions SET status = ?, processed_at = datetime('now'), processed_by = ? WHERE id = ?
+  UPDATE referral_redemptions SET status = ?, rejection_reason = ?, processed_at = datetime('now'), processed_by = ? WHERE id = ?
 `);
 
 router.get("/referral-redemptions/pending", (req, res) => {
   res.json({ redemptions: listPendingRedemptions.all() });
 });
 
-router.post("/referral-redemptions/:id/approve", requireRole("finance_admin"), sensitiveActionLimiter, (req, res) => {
+router.post("/referral-redemptions/:id/approve", requirePermission("approve_redemptions"), sensitiveActionLimiter, (req, res) => {
   const r = getRedemption.get(req.params.id);
   if (!r) return res.status(404).json({ error: "Redemption not found." });
   if (r.status !== "pending") return res.status(400).json({ error: "Already processed." });
 
-  setRedemptionStatus.run("paid", req.user.id, r.id);
+  setRedemptionStatus.run("paid", null, req.user.id, r.id);
 
   logAction(req.user.id, "redemption.approve", "referral_redemption", r.id, { user_id: r.user_id, usdt_amount: r.usdt_amount });
   notify(r.user_id, "redemption_approved", `Your referral redemption of ${r.usdt_amount} USDT was approved and marked paid.`, "/referral.html");
@@ -293,21 +345,32 @@ router.post("/referral-redemptions/:id/approve", requireRole("finance_admin"), s
   res.json({ ok: true, message: "Marked paid. Actually sending USDT still has to happen outside this app." });
 });
 
-router.post("/referral-redemptions/:id/reject", requireRole("finance_admin"), sensitiveActionLimiter, (req, res) => {
+router.post("/referral-redemptions/:id/reject", requirePermission("approve_redemptions"), sensitiveActionLimiter, (req, res) => {
   const r = getRedemption.get(req.params.id);
   if (!r) return res.status(404).json({ error: "Redemption not found." });
   if (r.status !== "pending") return res.status(400).json({ error: "Already processed." });
 
-  setRedemptionStatus.run("rejected", req.user.id, r.id);
+  const reason = req.body && req.body.reason ? String(req.body.reason).trim().slice(0, 1000) : null;
+  setRedemptionStatus.run("rejected", reason, req.user.id, r.id);
 
-  logAction(req.user.id, "redemption.reject", "referral_redemption", r.id, { user_id: r.user_id, usdt_amount: r.usdt_amount });
-  notify(r.user_id, "redemption_rejected", `Your referral redemption of ${r.usdt_amount} USDT was rejected.`, "/referral.html");
+  logAction(req.user.id, "redemption.reject", "referral_redemption", r.id, { user_id: r.user_id, usdt_amount: r.usdt_amount, reason });
+  notify(
+    r.user_id,
+    "redemption_rejected",
+    reason
+      ? `Your referral redemption of ${r.usdt_amount} USDT was rejected: ${reason}.`
+      : `Your referral redemption of ${r.usdt_amount} USDT was rejected.`,
+    "/referral.html"
+  );
   const user = getUserById.get(r.user_id);
   if (user) {
     sendEmail({
       to: user.email,
       subject: "Your referral redemption was rejected",
-      html: layout("Redemption rejected", `<p>Your referral redemption of <strong>${r.usdt_amount} USDT</strong> was rejected. Contact our team if you have questions.</p>`),
+      html: layout(
+        "Redemption rejected",
+        `<p>Your referral redemption of <strong>${r.usdt_amount} USDT</strong> was rejected.${reason ? ` Reason: <strong>${reason}</strong>.` : ""} Contact our team if you have questions.</p>`
+      ),
     });
   }
 
@@ -340,7 +403,7 @@ router.get("/projects", (req, res) => {
   res.json({ projects: listProjectsAdmin.all() });
 });
 
-router.post("/projects", (req, res) => {
+router.post("/projects", requirePermission("manage_projects"), (req, res) => {
   const { title, description, targetAmount, startDate, endDate } = req.body || {};
   if (!title || !targetAmount || !startDate || !endDate) {
     return res.status(400).json({ error: "title, targetAmount, startDate, and endDate are required." });
@@ -365,7 +428,7 @@ router.post("/projects", (req, res) => {
 
 // Also used to extend/shorten the end date, edit details, or open/close a
 // project — send only the fields you want to change.
-router.patch("/projects/:id", (req, res) => {
+router.patch("/projects/:id", requirePermission("manage_projects"), (req, res) => {
   const existing = getProject.get(req.params.id);
   if (!existing) return res.status(404).json({ error: "Project not found." });
 
@@ -405,7 +468,7 @@ const listPendingInvestmentRequests = db.prepare(`
 `);
 const getInvestmentRequest = db.prepare("SELECT * FROM investment_requests WHERE id = ?");
 const setInvestmentRequestStatus = db.prepare(`
-  UPDATE investment_requests SET status = ?, processed_at = datetime('now'), processed_by = ? WHERE id = ?
+  UPDATE investment_requests SET status = ?, rejection_reason = ?, processed_at = datetime('now'), processed_by = ? WHERE id = ?
 `);
 const insertInvestmentFromRequest = db.prepare(`
   INSERT INTO investments (user_id, project, project_id, amount) VALUES (?, ?, ?, ?)
@@ -421,7 +484,7 @@ router.get("/investment-requests/:id/proof", (req, res) => {
   res.sendFile(path.join(dataDir, request.proof_file_path));
 });
 
-router.post("/investment-requests/:id/approve", requireRole("finance_admin"), sensitiveActionLimiter, (req, res) => {
+router.post("/investment-requests/:id/approve", requirePermission("approve_investments"), sensitiveActionLimiter, (req, res) => {
   const request = getInvestmentRequest.get(req.params.id);
   if (!request) return res.status(404).json({ error: "Investment request not found." });
   if (request.status !== "pending") return res.status(400).json({ error: "Already processed." });
@@ -436,7 +499,7 @@ router.post("/investment-requests/:id/approve", requireRole("finance_admin"), se
 
   const project = getProject.get(request.project_id);
   deductWalletBalance.run(request.amount, request.user_id);
-  setInvestmentRequestStatus.run("approved", req.user.id, request.id);
+  setInvestmentRequestStatus.run("approved", null, req.user.id, request.id);
   insertInvestmentFromRequest.run(
     request.user_id,
     project ? project.title : "Investment",
@@ -465,22 +528,25 @@ router.post("/investment-requests/:id/approve", requireRole("finance_admin"), se
   res.json({ ok: true });
 });
 
-router.post("/investment-requests/:id/reject", requireRole("finance_admin"), sensitiveActionLimiter, (req, res) => {
+router.post("/investment-requests/:id/reject", requirePermission("approve_investments"), sensitiveActionLimiter, (req, res) => {
   const request = getInvestmentRequest.get(req.params.id);
   if (!request) return res.status(404).json({ error: "Investment request not found." });
   if (request.status !== "pending") return res.status(400).json({ error: "Already processed." });
 
-  setInvestmentRequestStatus.run("rejected", req.user.id, request.id);
+  const reason = req.body && req.body.reason ? String(req.body.reason).trim().slice(0, 1000) : null;
+  setInvestmentRequestStatus.run("rejected", reason, req.user.id, request.id);
 
   const project = getProject.get(request.project_id);
   const user = getUserById.get(request.user_id);
   logAction(req.user.id, "investment_request.reject", "investment_request", request.id, {
-    user_id: request.user_id, amount: request.amount, project_id: request.project_id,
+    user_id: request.user_id, amount: request.amount, project_id: request.project_id, reason,
   });
   notify(
     request.user_id,
     "investment_rejected",
-    `Your investment request of $${request.amount} was rejected.`,
+    reason
+      ? `Your investment request of $${request.amount} was rejected: ${reason}.`
+      : `Your investment request of $${request.amount} was rejected.`,
     "/invest.html"
   );
   if (user) {
@@ -489,7 +555,7 @@ router.post("/investment-requests/:id/reject", requireRole("finance_admin"), sen
       subject: "Your investment request was rejected",
       html: layout(
         "Investment rejected",
-        `<p>Your investment request of <strong>$${request.amount}</strong>${project ? ` in <strong>${project.title}</strong>` : ""} was rejected. The reserved amount is available in your balance again.</p>`
+        `<p>Your investment request of <strong>$${request.amount}</strong>${project ? ` in <strong>${project.title}</strong>` : ""} was rejected.${reason ? ` Reason: <strong>${reason}</strong>.` : ""} The reserved amount is available in your balance again.</p>`
       ),
     });
   }
@@ -508,7 +574,7 @@ const listPendingDeposits = db.prepare(`
 `);
 const getDeposit = db.prepare("SELECT * FROM deposit_requests WHERE id = ?");
 const setDepositStatus = db.prepare(`
-  UPDATE deposit_requests SET status = ?, processed_at = datetime('now'), processed_by = ? WHERE id = ?
+  UPDATE deposit_requests SET status = ?, rejection_reason = ?, processed_at = datetime('now'), processed_by = ? WHERE id = ?
 `);
 const addToWalletBalance = db.prepare("UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?");
 
@@ -522,12 +588,12 @@ router.get("/deposits/:id/proof", (req, res) => {
   res.sendFile(path.join(dataDir, deposit.proof_file_path));
 });
 
-router.post("/deposits/:id/approve", requireRole("finance_admin"), sensitiveActionLimiter, (req, res) => {
+router.post("/deposits/:id/approve", requirePermission("approve_deposits"), sensitiveActionLimiter, (req, res) => {
   const deposit = getDeposit.get(req.params.id);
   if (!deposit) return res.status(404).json({ error: "Deposit request not found." });
   if (deposit.status !== "pending") return res.status(400).json({ error: "Already processed." });
 
-  setDepositStatus.run("approved", req.user.id, deposit.id);
+  setDepositStatus.run("approved", null, req.user.id, deposit.id);
   addToWalletBalance.run(deposit.amount, deposit.user_id);
 
   logAction(req.user.id, "deposit.approve", "deposit_request", deposit.id, { user_id: deposit.user_id, amount: deposit.amount });
@@ -544,21 +610,32 @@ router.post("/deposits/:id/approve", requireRole("finance_admin"), sensitiveActi
   res.json({ ok: true });
 });
 
-router.post("/deposits/:id/reject", requireRole("finance_admin"), sensitiveActionLimiter, (req, res) => {
+router.post("/deposits/:id/reject", requirePermission("approve_deposits"), sensitiveActionLimiter, (req, res) => {
   const deposit = getDeposit.get(req.params.id);
   if (!deposit) return res.status(404).json({ error: "Deposit request not found." });
   if (deposit.status !== "pending") return res.status(400).json({ error: "Already processed." });
 
-  setDepositStatus.run("rejected", req.user.id, deposit.id);
+  const reason = req.body && req.body.reason ? String(req.body.reason).trim().slice(0, 1000) : null;
+  setDepositStatus.run("rejected", reason, req.user.id, deposit.id);
 
-  logAction(req.user.id, "deposit.reject", "deposit_request", deposit.id, { user_id: deposit.user_id, amount: deposit.amount });
-  notify(deposit.user_id, "deposit_rejected", `Your deposit of $${deposit.amount} was rejected.`, "/balance.html");
+  logAction(req.user.id, "deposit.reject", "deposit_request", deposit.id, { user_id: deposit.user_id, amount: deposit.amount, reason });
+  notify(
+    deposit.user_id,
+    "deposit_rejected",
+    reason
+      ? `Your deposit of $${deposit.amount} was rejected: ${reason}. You can submit a new deposit from your Balance page.`
+      : `Your deposit of $${deposit.amount} was rejected.`,
+    "/balance.html"
+  );
   const user = getUserById.get(deposit.user_id);
   if (user) {
     sendEmail({
       to: user.email,
       subject: "Your deposit was rejected",
-      html: layout("Deposit rejected", `<p>Your deposit of <strong>$${deposit.amount}</strong> was rejected. Please check your payment proof and transaction ID, then try again.</p>`),
+      html: layout(
+        "Deposit rejected",
+        `<p>Your deposit of <strong>$${deposit.amount}</strong> was rejected.${reason ? ` Reason: <strong>${reason}</strong>.` : ""} Please check your payment proof and transaction ID, then try again.</p>`
+      ),
     });
   }
 
