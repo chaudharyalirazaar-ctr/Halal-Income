@@ -93,8 +93,8 @@ function requirePermission(permission) {
 // real array so the frontend never has to JSON.parse it itself.
 function publicUser(user) {
   if (!user) return null;
-  const { password_hash, two_factor_secret, ...rest } = user;
-  return { ...rest, permissions: parsePermissions(user) };
+  const { password_hash, two_factor_secret, security_pin_hash, ...rest } = user;
+  return { ...rest, permissions: parsePermissions(user), pinSet: !!security_pin_hash };
 }
 
 module.exports = {

@@ -7,6 +7,7 @@ const rateLimit = require("express-rate-limit");
 const { db } = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { availableBalance } = require("../lib/wallet");
+const { requirePin } = require("../lib/pin");
 
 const router = express.Router();
 
@@ -124,7 +125,7 @@ router.get("/deposits", requireAuth, (req, res) => {
   res.json({ deposits: listOwnDeposits.all(req.user.id) });
 });
 
-router.post("/withdraw", requireAuth, moneyActionLimiter, (req, res) => {
+router.post("/withdraw", requireAuth, moneyActionLimiter, requirePin, (req, res) => {
   if (req.user.kyc_status !== "verified") {
     return res.status(403).json({ error: "Identity verification (KYC) is required before withdrawing." });
   }

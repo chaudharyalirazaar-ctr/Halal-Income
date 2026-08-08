@@ -157,6 +157,46 @@
               </table>
             </div>
           </div>
+
+          <div class="admin-section" id="pin-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Security PIN</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
+              A 4-digit PIN, separate from your password, that you'll enter every time you submit a
+              withdrawal request. Keep it somewhere safe — nobody else has access to it, including us.
+            </p>
+
+            <div id="pin-not-set-view">
+              <p style="font-weight:600; margin-top:10px;">Status: not set</p>
+              <form id="pin-set-form" style="display:grid; gap:10px; max-width:280px; margin-top:10px;">
+                <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                  <span>Your password</span>
+                  <input type="password" name="currentPassword" required autocomplete="current-password" />
+                </label>
+                <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                  <span>New 4-digit PIN</span>
+                  <input type="text" name="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required placeholder="1234" />
+                </label>
+                <p id="pin-set-error" style="display:none; color:#b3261e; font-size:0.85rem;"></p>
+                <button type="submit" class="btn btn-primary" style="justify-self:start;">Set PIN</button>
+              </form>
+            </div>
+
+            <div id="pin-set-view" style="display:none;">
+              <p style="font-weight:600; margin-top:10px; color:var(--emerald);">✓ PIN is set.</p>
+              <form id="pin-change-form" style="display:grid; gap:10px; max-width:280px; margin-top:10px;">
+                <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                  <span>Current PIN</span>
+                  <input type="text" name="currentPin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required />
+                </label>
+                <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                  <span>New PIN</span>
+                  <input type="text" name="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required placeholder="1234" />
+                </label>
+                <p id="pin-change-error" style="display:none; color:#b3261e; font-size:0.85rem;"></p>
+                <button type="submit" class="btn btn-primary" style="justify-self:start;">Change PIN</button>
+              </form>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -237,12 +277,26 @@
         </div>
       </div>
 
+      <div id="withdraw-modal-pin-locked" style="display:none;">
+        <p class="invest-modal-instructions">
+          Set a security PIN before you can withdraw — scroll down to the
+          <a href="#pin-section">Security PIN</a> section on this page, then come back.
+        </p>
+        <div class="invest-modal-actions">
+          <button type="button" class="btn btn-ghost" id="withdraw-modal-cancel-pin-locked">Close</button>
+        </div>
+      </div>
+
       <form id="withdraw-modal-form">
         <label>
           <span>Amount ($)</span>
           <input type="number" name="amount" min="30" step="0.01" required />
         </label>
         <p style="font-size: 0.8rem; opacity: 0.7; margin-top: -4px;">Minimum withdrawal: $30.</p>
+        <label>
+          <span>Security PIN</span>
+          <input type="text" name="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required autocomplete="off" />
+        </label>
         <p id="withdraw-modal-error" class="auth-error" style="display:none; color:#b3261e; font-size:0.9rem;"></p>
         <div class="invest-modal-actions">
           <button type="button" class="btn btn-ghost" id="withdraw-modal-cancel">Cancel</button>

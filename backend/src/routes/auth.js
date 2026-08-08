@@ -7,6 +7,7 @@ const { db, generateReferralCode } = require("../db");
 const { issueSessionCookie, clearSessionCookie, requireAuth, publicUser } = require("../middleware/auth");
 const { sendEmail, layout } = require("../lib/mailer");
 const { generateSecret, verifyToken, qrCodeDataUrl } = require("../lib/twoFactor");
+const { isValidPinFormat } = require("../lib/pin");
 
 const router = express.Router();
 
@@ -211,6 +212,54 @@ router.post("/2fa/disable", requireAuth, (req, res) => {
     return res.status(401).json({ error: "Incorrect password." });
   }
   disableTwoFactor.run(req.user.id);
+  res.json({ ok: true });
+});
+
+// ---- Security PIN ----------------------------------------------------------
+// One 4-digit PIN per account, required to submit a withdrawal (for regular
+// users) or to approve/reject any pending request (for admins) — see
+// backend/src/lib/pin.js's requirePin middleware for where it's enforced.
+
+const setSecurityPin = db.prepare("UPDATE users SET security_pin_hash = ? WHERE id = ?");
+const clearSecurityPin = db.prepare("UPDATE users SET security_pin_hash = NULL WHERE id = ?");
+
+router.get("/pin/status", requireAuth, (req, res) => {
+  res.json({ isSet: !!req.user.security_pin_hash });
+});
+
+// Setting a PIN for the first time needs only the current password (proves
+// it's really the account owner). Changing an existing PIN needs the
+// CURRENT PIN instead — a stolen/guessed password alone shouldn't be enough
+// to silently swap out the PIN that's supposed to protect withdrawals and
+// approvals.
+router.post("/pin", requireAuth, (req, res) => {
+  const { pin, currentPassword, currentPin } = req.body || {};
+
+  if (!isValidPinFormat(pin)) {
+    return res.status(400).json({ error: "PIN must be exactly 4 digits." });
+  }
+
+  if (req.user.security_pin_hash) {
+    if (!currentPin || !bcrypt.compareSync(String(currentPin), req.user.security_pin_hash)) {
+      return res.status(401).json({ error: "Incorrect current PIN." });
+    }
+  } else {
+    if (!currentPassword || !bcrypt.compareSync(currentPassword, req.user.password_hash)) {
+      return res.status(401).json({ error: "Incorrect password." });
+    }
+  }
+
+  setSecurityPin.run(bcrypt.hashSync(String(pin), 10), req.user.id);
+  res.json({ ok: true });
+});
+
+router.post("/pin/remove", requireAuth, (req, res) => {
+  const { currentPin } = req.body || {};
+  if (!req.user.security_pin_hash) return res.status(400).json({ error: "No PIN is set." });
+  if (!currentPin || !bcrypt.compareSync(String(currentPin), req.user.security_pin_hash)) {
+    return res.status(401).json({ error: "Incorrect current PIN." });
+  }
+  clearSecurityPin.run(req.user.id);
   res.json({ ok: true });
 });
 

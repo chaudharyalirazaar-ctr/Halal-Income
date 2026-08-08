@@ -140,6 +140,47 @@
             </div>
           </div>
 
+          <div class="admin-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Approval PIN</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
+              A 4-digit PIN, separate from your password, that you'll enter every time you approve or
+              reject a pending request anywhere in this panel — KYC, deposits, withdrawals, investments,
+              or referral redemptions. Required before you can approve/reject anything.
+            </p>
+
+            <div id="pin-not-set-view">
+              <p style="font-weight:600; margin-top:10px;">Status: not set</p>
+              <form id="pin-set-form" style="display:grid; gap:10px; max-width:280px; margin-top:10px;">
+                <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                  <span>Your password</span>
+                  <input type="password" name="currentPassword" required autocomplete="current-password" />
+                </label>
+                <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                  <span>New 4-digit PIN</span>
+                  <input type="text" name="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required placeholder="1234" />
+                </label>
+                <p id="pin-set-error" style="display:none; color:#b3261e; font-size:0.85rem;"></p>
+                <button type="submit" class="btn btn-primary" style="justify-self:start;">Set PIN</button>
+              </form>
+            </div>
+
+            <div id="pin-set-view" style="display:none;">
+              <p style="font-weight:600; margin-top:10px; color:var(--emerald);">✓ PIN is set.</p>
+              <form id="pin-change-form" style="display:grid; gap:10px; max-width:280px; margin-top:10px;">
+                <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                  <span>Current PIN</span>
+                  <input type="text" name="currentPin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required />
+                </label>
+                <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                  <span>New PIN</span>
+                  <input type="text" name="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required placeholder="1234" />
+                </label>
+                <p id="pin-change-error" style="display:none; color:#b3261e; font-size:0.85rem;"></p>
+                <button type="submit" class="btn btn-primary" style="justify-self:start;">Change PIN</button>
+              </form>
+            </div>
+          </div>
+
           <div class="admin-section">
             <div class="admin-section-head">
               <h2>Projects</h2>
@@ -379,11 +420,32 @@
       return data;
     }
 
+    // Every approve/reject action needs the admin's own 4-digit PIN — see
+    // backend/src/lib/pin.js. window.prompt is deliberately reused here (same
+    // pattern as the reason prompt below) rather than building a modal for
+    // this: it's a single blocking input, cancellable, no extra UI to wire.
+    function promptForPin() {
+      const pin = window.prompt("Enter your approval PIN:", "");
+      if (pin === null) return null;
+      if (!/^\d{4}$/.test(pin.trim())) {
+        alert("PIN must be exactly 4 digits.");
+        return null;
+      }
+      return pin.trim();
+    }
+
     async function actOn(path, btn, onDone) {
+      const pin = promptForPin();
+      if (pin === null) return;
+
       const row = btn.closest("tr");
       row.querySelectorAll("button").forEach((b) => (b.disabled = true));
       try {
-        await api(path, { method: "POST" });
+        await api(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin }),
+        });
         onDone();
       } catch (err) {
         alert(err.message);
@@ -393,12 +455,15 @@
 
     // Same as actOn, but first prompts for a reason the affected user will
     // see (in their notification/email) so a rejection isn't just a silent
-    // no — they know what to fix before resubmitting. Cancelling the prompt
-    // aborts the rejection entirely; an empty reason is allowed (submits as
-    // no reason given) since not every rejection needs an explanation.
+    // no — they know what to fix before resubmitting. Cancelling either
+    // prompt aborts the rejection entirely; an empty reason is allowed
+    // (submits as no reason given) since not every rejection needs one.
     async function rejectWithReason(path, btn, onDone) {
       const reason = window.prompt("Reason for rejection (the user will see this — leave blank if none):", "");
       if (reason === null) return;
+
+      const pin = promptForPin();
+      if (pin === null) return;
 
       const row = btn.closest("tr");
       row.querySelectorAll("button").forEach((b) => (b.disabled = true));
@@ -406,7 +471,7 @@
         await api(path, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason: reason.trim() }),
+          body: JSON.stringify({ reason: reason.trim(), pin }),
         });
         onDone();
       } catch (err) {
@@ -1081,6 +1146,62 @@
       refreshStatus();
     }
 
+    async function refreshPinStatus() {
+      const { isSet } = await api("/api/auth/pin/status");
+      document.getElementById("pin-not-set-view").style.display = isSet ? "none" : "block";
+      document.getElementById("pin-set-view").style.display = isSet ? "block" : "none";
+    }
+
+    function wirePinForms() {
+      const setForm = document.getElementById("pin-set-form");
+      const setError = document.getElementById("pin-set-error");
+      setForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        setError.style.display = "none";
+        const submitBtn = setForm.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        try {
+          await api("/api/auth/pin", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pin: setForm.pin.value, currentPassword: setForm.currentPassword.value }),
+          });
+          setForm.reset();
+          await refreshPinStatus();
+        } catch (err) {
+          setError.textContent = err.message;
+          setError.style.display = "block";
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+
+      const changeForm = document.getElementById("pin-change-form");
+      const changeError = document.getElementById("pin-change-error");
+      changeForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        changeError.style.display = "none";
+        const submitBtn = changeForm.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        try {
+          await api("/api/auth/pin", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pin: changeForm.pin.value, currentPin: changeForm.currentPin.value }),
+          });
+          changeForm.reset();
+          alert("PIN changed.");
+        } catch (err) {
+          changeError.textContent = err.message;
+          changeError.style.display = "block";
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+
+      refreshPinStatus();
+    }
+
     document.addEventListener("DOMContentLoaded", async () => {
       const user = await Auth.currentUser();
 
@@ -1096,6 +1217,7 @@
 
       wireRestoreForm();
       wireTwoFactor();
+      wirePinForms();
       document.getElementById("users-search").addEventListener("input", () => {
         usersPage = 1;
         renderUsersPage();

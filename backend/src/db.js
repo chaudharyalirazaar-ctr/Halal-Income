@@ -254,6 +254,16 @@ if (!userColumns.some((c) => c.name === "phone")) {
   db.exec("ALTER TABLE users ADD COLUMN phone TEXT");
 }
 
+// Security PIN — a single 4-digit PIN per account, used two different ways
+// depending on who the account belongs to: a regular user must enter it to
+// submit a withdrawal request; an admin must enter it to approve or reject
+// any pending request. Nullable — nobody has one until they set it via
+// POST /api/auth/pin, and the relevant action is blocked with a clear error
+// until they do (see lib/pin.js's requirePin middleware).
+if (!userColumns.some((c) => c.name === "security_pin_hash")) {
+  db.exec("ALTER TABLE users ADD COLUMN security_pin_hash TEXT");
+}
+
 // Rejection reasons — every reject action on these five queues can now
 // carry an admin-written explanation the affected user sees, so a mistaken
 // or disputed rejection is something they can actually understand and

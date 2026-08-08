@@ -23,6 +23,12 @@
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@test.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "AdminPass123!";
+// Approval PIN for the (persistent, real) admin account. If it already has a
+// PIN set from a previous run or real use, this must match that existing
+// PIN — override via ADMIN_PIN if so. The test user's PIN doesn't have this
+// problem since it's a fresh throwaway account every run.
+const ADMIN_PIN = process.env.ADMIN_PIN || "1234";
+const USER_PIN = "1234";
 
 const DEPOSIT_AMOUNT = 500;
 const INVEST_AMOUNT = 300;
@@ -129,11 +135,23 @@ async function main() {
   const adminLoginRes = await admin.post("/api/auth/login", { json: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } });
   assert(adminLoginRes.ok && adminLoginRes.data.user.is_admin, "admin login succeeds");
 
+  console.log("4.5. Set PINs (user's withdraw PIN, admin's approval PIN)");
+  const userPinRes = await user.post("/api/auth/pin", { json: { pin: USER_PIN, currentPassword: testPassword } });
+  assert(userPinRes.ok, "user sets a withdrawal PIN");
+
+  const adminPinStatus = await admin.get("/api/auth/pin/status");
+  if (!adminPinStatus.data.isSet) {
+    const adminPinRes = await admin.post("/api/auth/pin", { json: { pin: ADMIN_PIN, currentPassword: ADMIN_PASSWORD } });
+    assert(adminPinRes.ok, "admin sets an approval PIN");
+  } else {
+    console.log(`  (admin already has a PIN set — assuming it's "${ADMIN_PIN}"; override with ADMIN_PIN env var if not)`);
+  }
+
   console.log("5. Admin approves KYC");
   const pendingKyc = await admin.get("/api/admin/kyc/pending");
   const kycSubmission = pendingKyc.data.submissions.find((s) => s.user_email === testEmail);
   assert(!!kycSubmission, "the new KYC submission shows up in the pending queue");
-  const kycApproveRes = await admin.post(`/api/admin/kyc/${kycSubmission.id}/approve`);
+  const kycApproveRes = await admin.post(`/api/admin/kyc/${kycSubmission.id}/approve`, { json: { pin: ADMIN_PIN } });
   assert(kycApproveRes.ok, "admin approves KYC");
 
   console.log("6. Deposit");
@@ -149,7 +167,7 @@ async function main() {
   const pendingDeposits = await admin.get("/api/admin/deposits/pending");
   const depositRow = pendingDeposits.data.deposits.find((d) => d.user_email === testEmail);
   assert(!!depositRow, "the new deposit shows up in the pending queue");
-  const depositApproveRes = await admin.post(`/api/admin/deposits/${depositRow.id}/approve`);
+  const depositApproveRes = await admin.post(`/api/admin/deposits/${depositRow.id}/approve`, { json: { pin: ADMIN_PIN } });
   assert(depositApproveRes.ok, "admin approves the deposit");
 
   let investmentsRes = await user.get("/api/investments");
@@ -177,7 +195,7 @@ async function main() {
   const pendingInvReqs = await admin.get("/api/admin/investment-requests/pending");
   const invReqRow = pendingInvReqs.data.requests.find((r) => r.user_email === testEmail);
   assert(!!invReqRow, "the new investment request shows up in the pending queue");
-  const invApproveRes = await admin.post(`/api/admin/investment-requests/${invReqRow.id}/approve`);
+  const invApproveRes = await admin.post(`/api/admin/investment-requests/${invReqRow.id}/approve`, { json: { pin: ADMIN_PIN } });
   assert(invApproveRes.ok, "admin approves the investment request");
 
   investmentsRes = await user.get("/api/investments");
@@ -202,13 +220,13 @@ async function main() {
   );
 
   console.log("11. Withdraw the full balance, admin approves");
-  const withdrawRes = await user.post("/api/wallet/withdraw", { json: { amount: EXPECTED_BALANCE_BEFORE_WITHDRAW } });
+  const withdrawRes = await user.post("/api/wallet/withdraw", { json: { amount: EXPECTED_BALANCE_BEFORE_WITHDRAW, pin: USER_PIN } });
   assert(withdrawRes.ok, "withdrawal request submitted");
 
   const pendingWithdrawals = await admin.get("/api/admin/withdrawals/pending");
   const withdrawalRow = pendingWithdrawals.data.withdrawals.find((w) => w.user_email === testEmail);
   assert(!!withdrawalRow, "the new withdrawal shows up in the pending queue");
-  const withdrawApproveRes = await admin.post(`/api/admin/withdrawals/${withdrawalRow.id}/approve`);
+  const withdrawApproveRes = await admin.post(`/api/admin/withdrawals/${withdrawalRow.id}/approve`, { json: { pin: ADMIN_PIN } });
   assert(withdrawApproveRes.ok, "admin approves the withdrawal");
 
   investmentsRes = await user.get("/api/investments");

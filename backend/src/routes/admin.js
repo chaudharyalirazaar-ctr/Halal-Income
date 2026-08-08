@@ -9,6 +9,7 @@ const { createBackupZip, restoreFromZip } = require("../lib/backup");
 const { sendEmail, layout } = require("../lib/mailer");
 const { notify } = require("../lib/notifications");
 const { logAction } = require("../lib/audit");
+const { requirePin } = require("../lib/pin");
 
 const router = express.Router();
 const dataDir = path.join(__dirname, "..", "..", "data");
@@ -117,7 +118,7 @@ router.get("/kyc/:id/document", (req, res) => {
   res.sendFile(path.join(dataDir, submission.file_path));
 });
 
-router.post("/kyc/:id/approve", requirePermission("approve_kyc"), (req, res) => {
+router.post("/kyc/:id/approve", requirePermission("approve_kyc"), requirePin, (req, res) => {
   const submission = getKycSubmission.get(req.params.id);
   if (!submission) return res.status(404).json({ error: "Submission not found." });
 
@@ -141,7 +142,7 @@ router.post("/kyc/:id/approve", requirePermission("approve_kyc"), (req, res) => 
   res.json({ ok: true });
 });
 
-router.post("/kyc/:id/reject", requirePermission("approve_kyc"), (req, res) => {
+router.post("/kyc/:id/reject", requirePermission("approve_kyc"), requirePin, (req, res) => {
   const submission = getKycSubmission.get(req.params.id);
   if (!submission) return res.status(404).json({ error: "Submission not found." });
 
@@ -238,7 +239,7 @@ router.get("/withdrawals/pending", (req, res) => {
   res.json({ withdrawals: listPendingWithdrawals.all() });
 });
 
-router.post("/withdrawals/:id/approve", requirePermission("approve_withdrawals"), sensitiveActionLimiter, (req, res) => {
+router.post("/withdrawals/:id/approve", requirePermission("approve_withdrawals"), sensitiveActionLimiter, requirePin, (req, res) => {
   const w = getWithdrawal.get(req.params.id);
   if (!w) return res.status(404).json({ error: "Withdrawal request not found." });
   if (w.status !== "pending") return res.status(400).json({ error: "Already processed." });
@@ -274,7 +275,7 @@ router.post("/withdrawals/:id/approve", requirePermission("approve_withdrawals")
   res.json({ ok: true, message: "Marked paid. Actually sending funds still has to happen outside this app." });
 });
 
-router.post("/withdrawals/:id/reject", requirePermission("approve_withdrawals"), sensitiveActionLimiter, (req, res) => {
+router.post("/withdrawals/:id/reject", requirePermission("approve_withdrawals"), sensitiveActionLimiter, requirePin, (req, res) => {
   const w = getWithdrawal.get(req.params.id);
   if (!w) return res.status(404).json({ error: "Withdrawal request not found." });
   if (w.status !== "pending") return res.status(400).json({ error: "Already processed." });
@@ -324,7 +325,7 @@ router.get("/referral-redemptions/pending", (req, res) => {
   res.json({ redemptions: listPendingRedemptions.all() });
 });
 
-router.post("/referral-redemptions/:id/approve", requirePermission("approve_redemptions"), sensitiveActionLimiter, (req, res) => {
+router.post("/referral-redemptions/:id/approve", requirePermission("approve_redemptions"), sensitiveActionLimiter, requirePin, (req, res) => {
   const r = getRedemption.get(req.params.id);
   if (!r) return res.status(404).json({ error: "Redemption not found." });
   if (r.status !== "pending") return res.status(400).json({ error: "Already processed." });
@@ -345,7 +346,7 @@ router.post("/referral-redemptions/:id/approve", requirePermission("approve_rede
   res.json({ ok: true, message: "Marked paid. Actually sending USDT still has to happen outside this app." });
 });
 
-router.post("/referral-redemptions/:id/reject", requirePermission("approve_redemptions"), sensitiveActionLimiter, (req, res) => {
+router.post("/referral-redemptions/:id/reject", requirePermission("approve_redemptions"), sensitiveActionLimiter, requirePin, (req, res) => {
   const r = getRedemption.get(req.params.id);
   if (!r) return res.status(404).json({ error: "Redemption not found." });
   if (r.status !== "pending") return res.status(400).json({ error: "Already processed." });
@@ -484,7 +485,7 @@ router.get("/investment-requests/:id/proof", (req, res) => {
   res.sendFile(path.join(dataDir, request.proof_file_path));
 });
 
-router.post("/investment-requests/:id/approve", requirePermission("approve_investments"), sensitiveActionLimiter, (req, res) => {
+router.post("/investment-requests/:id/approve", requirePermission("approve_investments"), sensitiveActionLimiter, requirePin, (req, res) => {
   const request = getInvestmentRequest.get(req.params.id);
   if (!request) return res.status(404).json({ error: "Investment request not found." });
   if (request.status !== "pending") return res.status(400).json({ error: "Already processed." });
@@ -528,7 +529,7 @@ router.post("/investment-requests/:id/approve", requirePermission("approve_inves
   res.json({ ok: true });
 });
 
-router.post("/investment-requests/:id/reject", requirePermission("approve_investments"), sensitiveActionLimiter, (req, res) => {
+router.post("/investment-requests/:id/reject", requirePermission("approve_investments"), sensitiveActionLimiter, requirePin, (req, res) => {
   const request = getInvestmentRequest.get(req.params.id);
   if (!request) return res.status(404).json({ error: "Investment request not found." });
   if (request.status !== "pending") return res.status(400).json({ error: "Already processed." });
@@ -588,7 +589,7 @@ router.get("/deposits/:id/proof", (req, res) => {
   res.sendFile(path.join(dataDir, deposit.proof_file_path));
 });
 
-router.post("/deposits/:id/approve", requirePermission("approve_deposits"), sensitiveActionLimiter, (req, res) => {
+router.post("/deposits/:id/approve", requirePermission("approve_deposits"), sensitiveActionLimiter, requirePin, (req, res) => {
   const deposit = getDeposit.get(req.params.id);
   if (!deposit) return res.status(404).json({ error: "Deposit request not found." });
   if (deposit.status !== "pending") return res.status(400).json({ error: "Already processed." });
@@ -610,7 +611,7 @@ router.post("/deposits/:id/approve", requirePermission("approve_deposits"), sens
   res.json({ ok: true });
 });
 
-router.post("/deposits/:id/reject", requirePermission("approve_deposits"), sensitiveActionLimiter, (req, res) => {
+router.post("/deposits/:id/reject", requirePermission("approve_deposits"), sensitiveActionLimiter, requirePin, (req, res) => {
   const deposit = getDeposit.get(req.params.id);
   if (!deposit) return res.status(404).json({ error: "Deposit request not found." });
   if (deposit.status !== "pending") return res.status(400).json({ error: "Already processed." });

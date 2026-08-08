@@ -7,6 +7,7 @@
 // investments.js, and admin.js — nothing moves automatically.
 
 let latestKycVerified = false;
+let latestPinSet = false;
 
 function fmtDate(s) {
   if (!s) return "—";
@@ -174,17 +175,22 @@ function wireWithdrawModal() {
   const successEl = document.getElementById("withdraw-modal-success");
   const successText = document.getElementById("withdraw-modal-success-text");
   const kycLocked = document.getElementById("withdraw-modal-kyc-locked");
+  const pinLocked = document.getElementById("withdraw-modal-pin-locked");
 
   function open() {
     errorEl.style.display = "none";
     successEl.style.display = "none";
+    form.style.display = "none";
+    kycLocked.style.display = "none";
+    pinLocked.style.display = "none";
+
     if (!latestKycVerified) {
-      form.style.display = "none";
       kycLocked.style.display = "block";
+    } else if (!latestPinSet) {
+      pinLocked.style.display = "block";
     } else {
       form.reset();
       form.style.display = "grid";
-      kycLocked.style.display = "none";
     }
     overlay.classList.add("invest-modal-open");
   }
@@ -195,6 +201,7 @@ function wireWithdrawModal() {
   document.getElementById("open-withdraw-modal").addEventListener("click", open);
   document.getElementById("withdraw-modal-cancel").addEventListener("click", close);
   document.getElementById("withdraw-modal-cancel-locked").addEventListener("click", close);
+  document.getElementById("withdraw-modal-cancel-pin-locked").addEventListener("click", close);
   document.getElementById("withdraw-modal-close-success").addEventListener("click", () => {
     close();
     renderBalancePage();
@@ -212,7 +219,7 @@ function wireWithdrawModal() {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: Number(form.amount.value) }),
+        body: JSON.stringify({ amount: Number(form.amount.value), pin: form.pin.value }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Something went wrong.");
@@ -229,6 +236,71 @@ function wireWithdrawModal() {
   });
 }
 
+// ---- Security PIN -----------------------------------------------------------
+
+async function refreshPinStatus() {
+  const { isSet } = await fetchJson("/api/auth/pin/status");
+  latestPinSet = isSet;
+  document.getElementById("pin-not-set-view").style.display = isSet ? "none" : "block";
+  document.getElementById("pin-set-view").style.display = isSet ? "block" : "none";
+}
+
+function wirePinForms() {
+  const setForm = document.getElementById("pin-set-form");
+  const setError = document.getElementById("pin-set-error");
+  setForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    setError.style.display = "none";
+    const submitBtn = setForm.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    try {
+      const res = await fetch("/api/auth/pin", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: setForm.pin.value, currentPassword: setForm.currentPassword.value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Something went wrong.");
+      setForm.reset();
+      await refreshPinStatus();
+    } catch (err) {
+      setError.textContent = err.message;
+      setError.style.display = "block";
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+
+  const changeForm = document.getElementById("pin-change-form");
+  const changeError = document.getElementById("pin-change-error");
+  changeForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    changeError.style.display = "none";
+    const submitBtn = changeForm.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    try {
+      const res = await fetch("/api/auth/pin", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: changeForm.pin.value, currentPin: changeForm.currentPin.value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Something went wrong.");
+      changeForm.reset();
+      alert("PIN changed.");
+    } catch (err) {
+      changeError.textContent = err.message;
+      changeError.style.display = "block";
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+
+  refreshPinStatus();
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   const user = await Auth.currentUser();
 
@@ -239,5 +311,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   wireDepositModal();
   wireWithdrawModal();
+  wirePinForms();
   renderBalancePage();
 });
