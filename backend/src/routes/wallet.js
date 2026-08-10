@@ -9,6 +9,13 @@ const { requireAuth } = require("../middleware/auth");
 const { availableBalance } = require("../lib/wallet");
 const { requirePin } = require("../lib/pin");
 const { alertAdmins } = require("../lib/adminAlerts");
+const { sendSms } = require("../lib/sms");
+
+// Courtesy security alert, not a business rule — if someone other than the
+// account owner is behind an unexpected large withdrawal, catching it fast
+// matters more here than for a routine one. No specific threshold was
+// requested; this is a reasonable starting point and easy to change.
+const LARGE_WITHDRAWAL_SMS_THRESHOLD = 1000;
 
 const router = express.Router();
 
@@ -163,6 +170,13 @@ router.post("/withdraw", requireAuth, moneyActionLimiter, requirePin, (req, res)
     emailSubject: "New withdrawal request awaiting review",
     emailHtml: `<p><strong>${req.user.name}</strong> (${req.user.email}) requested a withdrawal of <strong>$${amount}</strong>. Log in to the admin panel to review it.</p>`,
   });
+
+  if (Number(amount) >= LARGE_WITHDRAWAL_SMS_THRESHOLD && req.user.phone) {
+    sendSms({
+      to: req.user.phone,
+      body: `Halal Income: a withdrawal request for $${amount} was just submitted on your account. If this wasn't you, contact us immediately.`,
+    });
+  }
 
   res.status(201).json({
     ok: true,

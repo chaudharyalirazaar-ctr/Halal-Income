@@ -117,6 +117,14 @@
             <button type="button" class="btn btn-ghost" id="open-withdraw-modal">Withdraw</button>
           </div>
 
+          <div class="admin-section" id="profit-history-section" style="display:none;">
+            <h2 style="margin-top:0;">Profit history</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
+              Profit credited to your investments over time, across everything you hold.
+            </p>
+            <div id="profit-history-chart" style="margin-top:12px; overflow-x:auto;"></div>
+          </div>
+
           <div class="admin-section">
             <div class="admin-section-head">
               <h2>Your investments</h2>
@@ -280,6 +288,16 @@
                 </form>
               </div>
             </div>
+          </div>
+
+          <div class="admin-section" id="logout-all-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Log out of all devices</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
+              If you think your password or PIN may have been seen by someone else, this ends every
+              logged-in session on your account at once — including this one, so you'll need to log
+              back in here too.
+            </p>
+            <button type="button" class="btn btn-danger" id="logout-all-btn" style="margin-top:10px;">Log out of all devices</button>
           </div>
         </div>
 

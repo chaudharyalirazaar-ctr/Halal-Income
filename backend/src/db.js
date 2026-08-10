@@ -331,6 +331,46 @@ db.exec(`
   );
 `);
 
+// Tracks the last time each named background job ran (see lib/scheduler.js).
+// Persisted in the DB rather than kept in memory so a server restart (very
+// common in dev, and on every Railway deploy in production) doesn't cause a
+// daily job to fire again immediately just because in-memory state reset.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS scheduler_state (
+    job_name TEXT PRIMARY KEY,
+    last_run_at TEXT NOT NULL
+  );
+`);
+
+// token_version: bumped by POST /api/auth/logout-all to invalidate every
+// outstanding session JWT at once ("log out of all devices") without needing
+// a server-side session store — the JWT's own `v` claim just has to match
+// this value or the token is treated as invalid. See middleware/auth.js.
+// last_login_ip: compared on each login to flag a login from a new location
+// for an SMS alert (see lib/sms.js) — nullable so the very first login on an
+// account never falsely triggers one.
+// kyc_reminder_sent_at: last time a re-verification reminder was sent, so
+// the scheduled job (lib/kycReminders.js) nudges periodically rather than
+// re-notifying every single day once someone's KYC is old.
+if (!userColumns.some((c) => c.name === "token_version")) {
+  db.exec("ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0");
+}
+if (!userColumns.some((c) => c.name === "last_login_ip")) {
+  db.exec("ALTER TABLE users ADD COLUMN last_login_ip TEXT");
+}
+if (!userColumns.some((c) => c.name === "kyc_reminder_sent_at")) {
+  db.exec("ALTER TABLE users ADD COLUMN kyc_reminder_sent_at TEXT");
+}
+
+// profit_reminder_sent_at: last time an admin was nudged that this project's
+// active investments haven't had profit distributed in a while (see
+// lib/profitReminders.js) — same "don't re-notify every day" purpose as
+// kyc_reminder_sent_at above.
+const projectColumns = db.prepare("PRAGMA table_info(projects)").all();
+if (!projectColumns.some((c) => c.name === "profit_reminder_sent_at")) {
+  db.exec("ALTER TABLE projects ADD COLUMN profit_reminder_sent_at TEXT");
+}
+
 function generateReferralCode() {
   return crypto.randomBytes(4).toString("hex").toUpperCase();
 }

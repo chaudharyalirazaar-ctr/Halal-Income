@@ -2,3 +2,10 @@
 *.log
 .DS_Store
 Thumbs.db
+
+# Runtime data: the SQLite database, uploaded KYC documents/payment proofs,
+# and backup zips (manual + nightly automated — see lib/scheduledBackup.js).
+# Never belongs in git — it's real user data, not source code, and Railway's
+# persistent volume is what actually keeps it around in production.
+backend/data/
+backend/.env

@@ -8,6 +8,7 @@ const { issueSessionCookie, clearSessionCookie, requireAuth, publicUser } = requ
 const { sendEmail, layout } = require("../lib/mailer");
 const { generateSecret, verifyToken, qrCodeDataUrl } = require("../lib/twoFactor");
 const { isValidPinFormat } = require("../lib/pin");
+const { sendSms } = require("../lib/sms");
 
 const router = express.Router();
 
@@ -52,6 +53,25 @@ const getResetToken = db.prepare(`
 `);
 const consumeResetToken = db.prepare("UPDATE password_reset_tokens SET consumed = 1 WHERE id = ?");
 const setPasswordHash = db.prepare("UPDATE users SET password_hash = ? WHERE id = ?");
+
+// Courtesy security alert: a login from a different IP than last time could
+// be the account owner on a new network, or could be someone else entirely
+// — an SMS either way costs nothing and lets the real owner notice fast if
+// it wasn't them. Deliberately simple (IP change only, no device
+// fingerprinting) rather than not shipping it at all; skips the very first
+// login on an account (last_login_ip is null) so signup never falsely fires.
+const setLastLoginIp = db.prepare("UPDATE users SET last_login_ip = ? WHERE id = ?");
+
+function checkNewLoginLocation(user, req) {
+  const currentIp = req.ip;
+  if (user.last_login_ip && user.last_login_ip !== currentIp && user.phone) {
+    sendSms({
+      to: user.phone,
+      body: `Halal Income: a login to your account was just detected from a new location. If this wasn't you, change your password immediately.`,
+    });
+  }
+  setLastLoginIp.run(currentIp, user.id);
+}
 
 function isAdult(dobStr) {
   const dob = new Date(dobStr);
@@ -135,6 +155,7 @@ router.post("/login", loginLimiter, (req, res) => {
     return res.json({ requires2fa: true });
   }
 
+  checkNewLoginLocation(user, req);
   issueSessionCookie(res, user.id);
   res.json({ user: publicUser(user) });
 });
@@ -164,6 +185,7 @@ router.post("/2fa/verify-login", loginLimiter, (req, res) => {
   }
 
   res.clearCookie(PENDING_2FA_COOKIE);
+  checkNewLoginLocation(user, req);
   issueSessionCookie(res, user.id);
   res.json({ user: publicUser(user) });
 });
@@ -392,6 +414,17 @@ router.post("/reset-password", (req, res) => {
 });
 
 router.post("/logout", (req, res) => {
+  clearSessionCookie(res);
+  res.json({ ok: true });
+});
+
+// Invalidates every session token on this account at once — see the
+// token_version comment in middleware/auth.js for the mechanism. Includes
+// the current device too (matches what "log out of all devices" implies);
+// the caller needs to log back in here just like anywhere else afterward.
+const bumpTokenVersion = db.prepare("UPDATE users SET token_version = token_version + 1 WHERE id = ?");
+router.post("/logout-all", requireAuth, (req, res) => {
+  bumpTokenVersion.run(req.user.id);
   clearSessionCookie(res);
   res.json({ ok: true });
 });

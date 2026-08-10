@@ -77,6 +77,10 @@
               deposits, withdrawals, projects, referrals) plus every uploaded file (KYC documents,
               payment proofs). Download one regularly and keep it somewhere safe.
             </p>
+            <p style="font-size:0.85rem; opacity:0.75; margin-top:10px;">
+              An automated backup also runs nightly and is emailed to every super admin.
+              Last automated backup: <span id="backup-status-text">checking…</span>
+            </p>
             <p style="margin-top:14px;">
               <a href="/api/admin/backup" class="btn btn-primary" download>Download full backup</a>
             </p>
@@ -456,7 +460,13 @@
           </div>
 
           <div class="admin-section" id="support-tickets-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
-            <h2 style="margin-top:0;">Support tickets</h2>
+            <div class="admin-section-head">
+              <h2 style="margin-top:0;">Support tickets</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/support-tickets/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/support-tickets/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
             <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
               "This didn't answer my question" escalations from the AI assistant widget on the homepage — includes the visitor's chat transcript for context, if there was one.
             </p>
@@ -741,6 +751,7 @@
         ["Total deposited (lifetime)", money(totals.total_deposited)],
         ["Total withdrawn (lifetime)", money(totals.total_withdrawn)],
         ["Pending actions", pending.kyc + pending.deposits + pending.withdrawals + pending.investment_requests + pending.redemptions],
+        ["Open support tickets", pending.support_tickets],
       ]
         .map(([label, value]) => `<div class="stat-card"><p class="stat-label">${label}</p><p class="stat-value">${value}</p></div>`)
         .join("");
@@ -1670,6 +1681,16 @@
       });
     }
 
+    async function loadBackupStatus() {
+      const statusEl = document.getElementById("backup-status-text");
+      try {
+        const { lastAutomatedBackupAt } = await api("/api/admin/backup/status");
+        statusEl.textContent = lastAutomatedBackupAt ? fmtDate(lastAutomatedBackupAt) : "none yet — runs within 24h of the server starting up";
+      } catch {
+        statusEl.textContent = "unavailable";
+      }
+    }
+
     function wireRestoreForm() {
       const form = document.getElementById("restore-form");
       const fileInput = form.querySelector('input[name="backup"]');
@@ -1956,6 +1977,7 @@
         loadTeamPermissions();
         await wireAuditLogFilters();
         loadAuditLog(1);
+        loadBackupStatus();
       } else {
         loadUsers();
       }

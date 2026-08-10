@@ -16,13 +16,18 @@ function isConfigured() {
 
 // subject/html are plain strings; keep templates simple, inline-styled, and
 // self-contained since email clients don't load external stylesheets.
-async function sendEmail({ to, subject, html }) {
+// attachments (optional) is Resend's own shape: [{ filename, content }],
+// content being a base64 string — used by the scheduled backup email.
+async function sendEmail({ to, subject, html, attachments }) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM || "Halal Income <onboarding@resend.dev>";
 
   if (!apiKey) {
     console.log(`[mailer] (no RESEND_API_KEY set — not actually sent) To: ${to} | Subject: ${subject}`);
     console.log(`[mailer] Body:\n${html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()}`);
+    if (attachments && attachments.length) {
+      console.log(`[mailer] (attachments not sent) ${attachments.map((a) => a.filename).join(", ")}`);
+    }
     return { sent: false, reason: "not_configured" };
   }
 
@@ -33,7 +38,7 @@ async function sendEmail({ to, subject, html }) {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from, to, subject, html }),
+      body: JSON.stringify({ from, to, subject, html, ...(attachments ? { attachments } : {}) }),
     });
 
     if (!res.ok) {

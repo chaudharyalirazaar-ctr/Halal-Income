@@ -979,6 +979,14 @@ router.get("/backup", requireRole(), (req, res) => {
   res.send(buffer);
 });
 
+// So the admin panel can show "last automated backup: ..." next to the
+// manual download button — see lib/scheduledBackup.js + lib/scheduler.js.
+const getSchedulerState = db.prepare("SELECT last_run_at FROM scheduler_state WHERE job_name = ?");
+router.get("/backup/status", requireRole(), (req, res) => {
+  const row = getSchedulerState.get("nightly-backup");
+  res.json({ lastAutomatedBackupAt: row ? row.last_run_at : null });
+});
+
 // Restoring replaces every user's data at once — reserved for super_admin
 // specifically (requireRole() with no args still lets super_admin through,
 // but no other role), unlike the finance/kyc actions above.
@@ -1040,7 +1048,8 @@ const analyticsPendingCounts = db.prepare(`
     (SELECT COUNT(*) FROM deposit_requests WHERE status = 'pending') AS deposits,
     (SELECT COUNT(*) FROM withdrawal_requests WHERE status = 'pending') AS withdrawals,
     (SELECT COUNT(*) FROM investment_requests WHERE status = 'pending') AS investment_requests,
-    (SELECT COUNT(*) FROM referral_redemptions WHERE status = 'pending') AS redemptions
+    (SELECT COUNT(*) FROM referral_redemptions WHERE status = 'pending') AS redemptions,
+    (SELECT COUNT(*) FROM support_tickets WHERE status != 'resolved') AS support_tickets
 `);
 // Last 6 calendar months (including the current one), oldest first.
 const monthlyDeposits = db.prepare(`
@@ -1271,6 +1280,23 @@ const EXPORTS = {
       { header: "End Date", key: "end_date", width: 14 },
       { header: "Status", key: "status", width: 12 },
       { header: "Created", key: "created_at", width: 20 },
+    ],
+  },
+  "support-tickets": {
+    title: "Support Tickets",
+    query: db.prepare(`
+      SELECT id, name, email, message, status, admin_reply, replied_at, created_at
+      FROM support_tickets ORDER BY created_at DESC
+    `),
+    columns: [
+      { header: "ID", key: "id", width: 8 },
+      { header: "Name", key: "name", width: 22 },
+      { header: "Email", key: "email", width: 28 },
+      { header: "Message", key: "message", width: 40 },
+      { header: "Status", key: "status", width: 14 },
+      { header: "Reply", key: "admin_reply", width: 40 },
+      { header: "Replied", key: "replied_at", width: 20 },
+      { header: "Submitted", key: "created_at", width: 20 },
     ],
   },
   "investment-requests": {

@@ -16,6 +16,10 @@ const projectsRoutes = require("./routes/projects");
 const walletRoutes = require("./routes/wallet");
 const notificationsRoutes = require("./routes/notifications");
 const supportRoutes = require("./routes/support");
+const scheduler = require("./lib/scheduler");
+const { runNightlyBackup } = require("./lib/scheduledBackup");
+const { runKycReverificationReminders } = require("./lib/kycReminders");
+const { runProfitDistributionReminders } = require("./lib/profitReminders");
 
 // Node's default behavior is to crash the entire process on an unhandled
 // promise rejection. In an Express 4 app, any `async (req, res) => {...}`
@@ -83,6 +87,15 @@ app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ error: "Something went wrong on the server." });
 });
+
+// Background jobs — nightly backup, KYC re-verification nudges, "time to
+// distribute profit" nudges. See lib/scheduler.js for how "daily" actually
+// works (DB-persisted last-run time, so a restart/redeploy doesn't
+// re-trigger everything).
+scheduler.registerDailyJob("nightly-backup", runNightlyBackup);
+scheduler.registerDailyJob("kyc-reverification-reminders", runKycReverificationReminders);
+scheduler.registerDailyJob("profit-distribution-reminders", runProfitDistributionReminders);
+scheduler.start();
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

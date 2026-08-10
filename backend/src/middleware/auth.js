@@ -4,8 +4,17 @@ const { db } = require("../db");
 const COOKIE_NAME = "session";
 const JWT_SECRET = process.env.JWT_SECRET || "dev-only-insecure-secret-change-me";
 
+const getTokenVersion = db.prepare("SELECT token_version FROM users WHERE id = ?");
+
+// The JWT carries the account's token_version at the moment it was issued
+// (`v`). "Log out of all devices" (POST /api/auth/logout-all) just bumps
+// that column — every outstanding token everywhere, including the one in
+// this very cookie, stops matching and is treated as invalid from then on.
+// No server-side session store needed for that: the version comparison in
+// loadUserFromToken() below is the whole mechanism.
 function issueSessionCookie(res, userId) {
-  const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: "30d" });
+  const row = getTokenVersion.get(userId);
+  const token = jwt.sign({ userId, v: row ? row.token_version : 0 }, JWT_SECRET, { expiresIn: "30d" });
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
@@ -26,7 +35,9 @@ function loadUserFromToken(req) {
   try {
     const payload = jwt.verify(token, JWT_SECRET);
     const user = getUserById.get(payload.userId);
-    return user || null;
+    if (!user) return null;
+    if ((payload.v || 0) !== (user.token_version || 0)) return null; // invalidated by logout-all
+    return user;
   } catch {
     return null;
   }

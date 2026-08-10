@@ -83,6 +83,7 @@ async function renderBalancePage() {
 
   await renderProjectUpdatesFeed(investments);
   await renderMySupportTickets();
+  await renderProfitHistoryChart();
 
   const depositsBody = document.getElementById("deposits-table-body");
   const { deposits } = await fetchJson("/api/wallet/deposits");
@@ -168,6 +169,55 @@ async function renderProjectUpdatesFeed(investments) {
       `<p style="margin:0; white-space:pre-wrap;">${escapeHtml(u.message)}</p>`;
     list.appendChild(card);
   });
+}
+
+// ---- Profit history chart --------------------------------------------------
+//
+// GET /api/investments/earnings-history groups every profit credit this user
+// has ever received by the day it landed (across all their investments —
+// see backend/src/routes/investments.js). A simple hand-drawn SVG bar chart,
+// same technique analytics.js already uses elsewhere on the site, so there's
+// no new charting dependency for one small chart.
+
+async function renderProfitHistoryChart() {
+  const section = document.getElementById("profit-history-section");
+  const container = document.getElementById("profit-history-chart");
+
+  let history;
+  try {
+    ({ history } = await fetchJson("/api/investments/earnings-history"));
+  } catch {
+    section.style.display = "none";
+    return;
+  }
+
+  if (!history.length) {
+    section.style.display = "none";
+    return;
+  }
+
+  section.style.display = "block";
+
+  const maxVal = Math.max(1, ...history.map((h) => h.amount));
+  const barW = 22, gap = 10, chartH = 140, labelH = 34;
+  const showLabels = history.length <= 20;
+  const svgW = Math.max(100, history.length * (barW + gap));
+
+  const bars = history
+    .map((h, i) => {
+      const x = i * (barW + gap);
+      const barH = Math.max(1, Math.round((h.amount / maxVal) * chartH));
+      const label = showLabels
+        ? `<text x="${x + barW / 2}" y="${chartH + 14}" text-anchor="end" font-size="9" fill="var(--ink)" transform="rotate(-45 ${x + barW / 2} ${chartH + 14})">${h.date.slice(5)}</text>`
+        : "";
+      return (
+        `<rect x="${x}" y="${chartH - barH}" width="${barW}" height="${barH}" fill="var(--emerald)"><title>${h.date}: $${h.amount.toLocaleString()}</title></rect>` +
+        label
+      );
+    })
+    .join("");
+
+  container.innerHTML = `<svg viewBox="0 0 ${svgW} ${chartH + labelH}" width="${svgW}" height="${chartH + labelH}" style="max-width:100%;">${bars}</svg>`;
 }
 
 // ---- My support tickets --------------------------------------------------
@@ -557,6 +607,19 @@ async function wireTwoFactor() {
   refreshStatus();
 }
 
+function wireLogoutAll() {
+  const btn = document.getElementById("logout-all-btn");
+  btn.addEventListener("click", async () => {
+    if (!confirm("Log out of every device, including this one? You'll need to log back in.")) return;
+    btn.disabled = true;
+    try {
+      await fetch("/api/auth/logout-all", { method: "POST", credentials: "same-origin" });
+    } finally {
+      window.location.href = "login.html";
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   const user = await Auth.currentUser();
 
@@ -569,5 +632,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   wireWithdrawModal();
   wirePinForms();
   wireTwoFactor();
+  wireLogoutAll();
   renderBalancePage();
 });

@@ -36,6 +36,20 @@ router.get("/", requireAuth, (req, res) => {
   });
 });
 
+// Every profit credit ever made to this user, grouped by the day it landed —
+// backs the profit-history chart on the Balance page. Not per-investment
+// (every distribution already records which investment/project in
+// earnings_events if that level of detail is ever needed); this is
+// deliberately the simpler "profit over time across everything" view.
+const earningsHistoryForUser = db.prepare(`
+  SELECT event_date AS date, SUM(amount) AS amount
+  FROM earnings_events WHERE user_id = ? GROUP BY event_date ORDER BY event_date ASC
+`);
+
+router.get("/earnings-history", requireAuth, (req, res) => {
+  res.json({ history: earningsHistoryForUser.all(req.user.id) });
+});
+
 // Moves an investment's unclaimed profit into the user's wallet balance,
 // where it can then be invested further or withdrawn — see wallet.js for
 // deposits/withdrawals and the general balance this feeds into.
