@@ -110,7 +110,24 @@
               Every KYC/deposit/withdrawal/investment/redemption approval or rejection, every access
               change, and every backup restore — who did it and when. Super admin only.
             </p>
-            <p class="admin-section-count" id="audit-log-count" style="margin-top:10px;">Loading…</p>
+            <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-top:14px;">
+              <label style="display:grid; gap:4px; font-size:0.82rem; font-weight:600;">
+                <span>Action</span>
+                <select id="audit-log-filter-action" style="padding:7px 10px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body); min-width:200px;">
+                  <option value="">All actions</option>
+                </select>
+              </label>
+              <label style="display:grid; gap:4px; font-size:0.82rem; font-weight:600;">
+                <span>From</span>
+                <input type="date" id="audit-log-filter-from" style="padding:6px 10px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);" />
+              </label>
+              <label style="display:grid; gap:4px; font-size:0.82rem; font-weight:600;">
+                <span>To</span>
+                <input type="date" id="audit-log-filter-to" style="padding:6px 10px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);" />
+              </label>
+              <button type="button" class="btn btn-ghost btn-small" id="audit-log-filter-clear">Clear filters</button>
+            </div>
+            <p class="admin-section-count" id="audit-log-count" style="margin-top:14px;">Loading…</p>
             <div class="table-card">
               <table class="analytics-table">
                 <thead>
@@ -1095,11 +1112,27 @@
       return parts.length ? parts.join(", ") : JSON.stringify(d);
     }
 
+    function auditLogFilterParams() {
+      const params = new URLSearchParams();
+      const action = document.getElementById("audit-log-filter-action").value;
+      const from = document.getElementById("audit-log-filter-from").value;
+      const to = document.getElementById("audit-log-filter-to").value;
+      if (action) params.set("action", action);
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
+      return params;
+    }
+
     async function loadAuditLog(page) {
       auditLogPage = page || auditLogPage;
-      const { entries, total, pageSize } = await api(`/api/admin/audit-log?page=${auditLogPage}&pageSize=${AUDIT_LOG_PAGE_SIZE}`);
+      const params = auditLogFilterParams();
+      params.set("page", auditLogPage);
+      params.set("pageSize", AUDIT_LOG_PAGE_SIZE);
+      const { entries, total, pageSize } = await api(`/api/admin/audit-log?${params.toString()}`);
 
-      document.getElementById("audit-log-count").textContent = `${total} total entr${total === 1 ? "y" : "ies"}`;
+      const filtered = params.has("action") || params.has("from") || params.has("to");
+      document.getElementById("audit-log-count").textContent =
+        `${total} total entr${total === 1 ? "y" : "ies"}${filtered ? " (filtered)" : ""}`;
 
       const body = document.getElementById("audit-log-body");
       body.innerHTML = entries.length
@@ -1131,6 +1164,33 @@
         if (prevBtn) prevBtn.addEventListener("click", () => loadAuditLog(auditLogPage - 1));
         if (nextBtn) nextBtn.addEventListener("click", () => loadAuditLog(auditLogPage + 1));
       }
+    }
+
+    async function wireAuditLogFilters() {
+      const actionSelect = document.getElementById("audit-log-filter-action");
+      const fromInput = document.getElementById("audit-log-filter-from");
+      const toInput = document.getElementById("audit-log-filter-to");
+      const clearBtn = document.getElementById("audit-log-filter-clear");
+
+      const { actions } = await api("/api/admin/audit-log/actions");
+      actions.forEach((a) => {
+        const opt = document.createElement("option");
+        opt.value = a;
+        // "investment_request.approve" -> "Investment request approve"
+        opt.textContent = a.replace(/[._]/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+        actionSelect.appendChild(opt);
+      });
+
+      const refilter = () => loadAuditLog(1);
+      actionSelect.addEventListener("change", refilter);
+      fromInput.addEventListener("change", refilter);
+      toInput.addEventListener("change", refilter);
+      clearBtn.addEventListener("click", () => {
+        actionSelect.value = "";
+        fromInput.value = "";
+        toInput.value = "";
+        refilter();
+      });
     }
 
     function wireRestoreForm() {
@@ -1414,6 +1474,7 @@
         document.getElementById("audit-log-section").style.display = "block";
         await loadUsers();
         loadTeamPermissions();
+        await wireAuditLogFilters();
         loadAuditLog(1);
       } else {
         loadUsers();

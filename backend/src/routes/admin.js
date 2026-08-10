@@ -805,21 +805,62 @@ router.get("/analytics", (req, res) => {
 // super_admin only — a lower-privileged admin reviewing what other admins
 // did isn't the intent of this feature.
 
-const countAuditLog = db.prepare("SELECT COUNT(*) AS total FROM audit_log");
-const pageAuditLog = db.prepare(`
-  SELECT a.*, u.name AS admin_name, u.email AS admin_email
-  FROM audit_log a LEFT JOIN users u ON u.id = a.admin_id
-  ORDER BY a.id DESC LIMIT ? OFFSET ?
-`);
+// Every action string logAction() has ever been called with in this file —
+// kept as a fixed list (rather than a live DISTINCT query) so the filter
+// dropdown always offers every known action, not just ones that happen to
+// have a row yet. Update this alongside adding a new logAction() call.
+const AUDIT_LOG_ACTIONS = [
+  "backup.download",
+  "deposit.approve",
+  "deposit.reject",
+  "investment_request.approve",
+  "investment_request.reject",
+  "kyc.approve",
+  "kyc.reject",
+  "redemption.approve",
+  "redemption.reject",
+  "user.access_change",
+  "user.pin_reset",
+  "user.role_change",
+  "withdrawal.approve",
+  "withdrawal.reject",
+];
+
+router.get("/audit-log/actions", requireRole(), (req, res) => {
+  res.json({ actions: AUDIT_LOG_ACTIONS });
+});
 
 router.get("/audit-log", requireRole(), (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 25));
-  const total = countAuditLog.get().total;
-  const entries = pageAuditLog.all(pageSize, (page - 1) * pageSize).map((e) => ({
-    ...e,
-    details: e.details ? JSON.parse(e.details) : null,
-  }));
+
+  const conditions = [];
+  const params = [];
+  if (req.query.action && AUDIT_LOG_ACTIONS.includes(req.query.action)) {
+    conditions.push("a.action = ?");
+    params.push(req.query.action);
+  }
+  if (req.query.from) {
+    conditions.push("date(a.created_at) >= date(?)");
+    params.push(req.query.from);
+  }
+  if (req.query.to) {
+    conditions.push("date(a.created_at) <= date(?)");
+    params.push(req.query.to);
+  }
+  const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  const total = db.prepare(`SELECT COUNT(*) AS total FROM audit_log a ${whereClause}`).get(...params).total;
+  const entries = db
+    .prepare(
+      `SELECT a.*, u.name AS admin_name, u.email AS admin_email
+       FROM audit_log a LEFT JOIN users u ON u.id = a.admin_id
+       ${whereClause}
+       ORDER BY a.id DESC LIMIT ? OFFSET ?`
+    )
+    .all(...params, pageSize, (page - 1) * pageSize)
+    .map((e) => ({ ...e, details: e.details ? JSON.parse(e.details) : null }));
+
   res.json({ entries, total, page, pageSize });
 });
 
