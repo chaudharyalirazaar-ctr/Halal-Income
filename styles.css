@@ -199,6 +199,26 @@ main > section:last-child { margin-bottom: 40px; }
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+/* Themed fallback for any plain input/textarea/select inside an
+   .admin-section that doesn't have its own more specific rule (an inline
+   style="..." on the element itself still wins, same as any CSS cascade —
+   this only fills in ones left unstyled). Keeps ad-hoc small forms added to
+   admin.html/balance.html later from defaulting to bare browser chrome. */
+.admin-section input[type="text"],
+.admin-section input[type="email"],
+.admin-section input[type="password"],
+.admin-section input[type="number"],
+.admin-section input[type="date"],
+.admin-section textarea,
+.admin-section select {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  padding: 8px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--sand);
+  background: var(--white);
+  color: var(--ink);
+}
 .admin-date-input {
   font-family: var(--font-mono);
   font-size: 0.82rem;
@@ -648,6 +668,17 @@ main > section:last-child { margin-bottom: 40px; }
   color: var(--ink);
 }
 .contact-form button { justify-self: start; margin-top: 6px; }
+
+#ai-escalate-form input,
+#ai-escalate-form textarea {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--sand);
+  background: var(--white);
+  color: var(--ink);
+}
 
 /* ---------- FOOTER ---------- */
 .site-footer { background: var(--ink); color: rgba(255,255,255,0.75); padding: 28px 0; }

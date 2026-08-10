@@ -15,6 +15,7 @@ const assistantRoutes = require("./routes/assistant");
 const projectsRoutes = require("./routes/projects");
 const walletRoutes = require("./routes/wallet");
 const notificationsRoutes = require("./routes/notifications");
+const supportRoutes = require("./routes/support");
 
 // Node's default behavior is to crash the entire process on an unhandled
 // promise rejection. In an Express 4 app, any `async (req, res) => {...}`
@@ -64,6 +65,7 @@ app.use("/api/assistant", assistantRoutes);
 app.use("/api/projects", projectsRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/notifications", notificationsRoutes);
+app.use("/api/support", supportRoutes);
 
 // Serve the existing static website (index.html, styles.css, *.js, etc.)
 // from the same origin/port so session cookies work without any CORS setup.

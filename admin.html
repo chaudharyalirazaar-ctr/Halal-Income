@@ -455,6 +455,15 @@
             <div id="project-update-history" style="display:grid; gap:10px; margin-top:16px;"></div>
           </div>
 
+          <div class="admin-section" id="support-tickets-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Support tickets</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
+              "This didn't answer my question" escalations from the AI assistant widget on the homepage — includes the visitor's chat transcript for context, if there was one.
+            </p>
+            <p class="admin-section-count" id="support-tickets-count" style="margin-top:10px;">Loading…</p>
+            <div id="support-tickets-list" style="display:grid; gap:12px; margin-top:10px;"></div>
+          </div>
+
           <div class="admin-section">
             <div class="admin-section-head">
               <h2>All users</h2>
@@ -524,6 +533,7 @@
                     <th>Approve<br/>investments</th>
                     <th>Approve<br/>redemptions</th>
                     <th>Manage<br/>projects</th>
+                    <th>Manage<br/>support</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -1205,6 +1215,96 @@
       }
     });
 
+    // ---- Support tickets ------------------------------------------------------
+
+    const SUPPORT_STATUS_LABEL = { open: "Open", in_progress: "In progress", resolved: "Resolved" };
+    const SUPPORT_STATUS_COLOR = { open: "#b3261e", in_progress: "#96754A", resolved: "var(--emerald)" };
+
+    async function loadSupportTickets() {
+      const { tickets } = await api("/api/admin/support-tickets");
+      const counts = tickets.reduce((acc, t) => {
+        acc[t.status] = (acc[t.status] || 0) + 1;
+        return acc;
+      }, {});
+      document.getElementById("support-tickets-count").textContent = tickets.length
+        ? `${counts.open || 0} open, ${counts.in_progress || 0} in progress, ${counts.resolved || 0} resolved`
+        : "No tickets yet.";
+
+      const list = document.getElementById("support-tickets-list");
+      list.innerHTML = "";
+      if (!tickets.length) {
+        list.innerHTML = '<p style="font-size:0.85rem; opacity:0.7;">No support tickets yet.</p>';
+        return;
+      }
+
+      tickets.forEach((t) => {
+        const card = document.createElement("div");
+        card.style.cssText = "border:1px solid var(--sand); border-radius:8px; padding:14px 16px;";
+
+        const conversationHtml =
+          t.conversation && t.conversation.length
+            ? `<details style="margin-top:10px;">
+                 <summary style="cursor:pointer; font-size:0.82rem; font-weight:600;">AI chat transcript (${t.conversation.length} messages)</summary>
+                 <div style="margin-top:8px; display:grid; gap:6px; font-size:0.82rem;">
+                   ${t.conversation.map((m) => `<div><strong>${m.role === "user" ? "Visitor" : "AI"}:</strong> ${m.content}</div>`).join("")}
+                 </div>
+               </details>`
+            : "";
+
+        const replyHtml = t.admin_reply
+          ? `<div style="margin-top:10px; padding:10px 12px; background:var(--parchment); border-radius:8px;">
+               <p style="font-size:0.78rem; opacity:0.7; margin:0 0 4px;">Replied ${fmtDate(t.replied_at)}</p>
+               <p style="margin:0; white-space:pre-wrap;">${t.admin_reply}</p>
+             </div>`
+          : "";
+
+        card.innerHTML =
+          `<div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+             <div><strong>${t.name}</strong> <span style="opacity:0.7; font-size:0.85rem;">(${t.email})</span>${t.user_name ? ` <span style="opacity:0.6; font-size:0.78rem;">— account: ${t.user_name}</span>` : ""}</div>
+             <div style="display:flex; align-items:center; gap:8px;">
+               <span style="font-size:0.78rem; font-weight:600; color:${SUPPORT_STATUS_COLOR[t.status]};">${SUPPORT_STATUS_LABEL[t.status]}</span>
+               <span style="font-size:0.78rem; opacity:0.6;">${fmtDate(t.created_at)}</span>
+             </div>
+           </div>
+           <p style="margin:8px 0 0; white-space:pre-wrap;">${t.message}</p>` +
+          conversationHtml +
+          replyHtml +
+          `<form class="support-reply-form" style="display:grid; gap:8px; margin-top:12px; max-width:520px;">
+             <textarea name="reply" rows="2" placeholder="Write a reply (optional — leave blank to just change status)"></textarea>
+             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+               <select name="status">
+                 <option value="open"${t.status === "open" ? " selected" : ""}>Open</option>
+                 <option value="in_progress"${t.status === "in_progress" ? " selected" : ""}>In progress</option>
+                 <option value="resolved"${t.status === "resolved" ? " selected" : ""}>Resolved</option>
+               </select>
+               <button type="submit" class="btn btn-primary btn-small">Save</button>
+             </div>
+           </form>`;
+
+        card.querySelector(".support-reply-form").addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const form = e.target;
+          const submitBtn = form.querySelector('button[type="submit"]');
+          submitBtn.disabled = true;
+          try {
+            const body = { status: form.status.value };
+            if (form.reply.value.trim()) body.reply = form.reply.value.trim();
+            await api(`/api/admin/support-tickets/${t.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            loadSupportTickets();
+          } catch (err) {
+            alert(err.message);
+            submitBtn.disabled = false;
+          }
+        });
+
+        list.appendChild(card);
+      });
+    }
+
     const USERS_PAGE_SIZE = 25;
     let allUsers = [];
     let currentAdminRole = null;
@@ -1295,6 +1395,7 @@
       { key: "approve_investments", label: "Approve investments" },
       { key: "approve_redemptions", label: "Approve redemptions" },
       { key: "manage_projects", label: "Manage projects" },
+      { key: "manage_support", label: "Manage support" },
     ];
 
     function renderTeamRow(u) {
@@ -1844,6 +1945,7 @@
       loadRedemptions();
       loadInvestmentRequests();
       loadDistributeProfit();
+      loadSupportTickets();
 
       // Team & permissions and the audit log are super-admin only — hidden
       // entirely for anyone else, since the backend would 403 either anyway.

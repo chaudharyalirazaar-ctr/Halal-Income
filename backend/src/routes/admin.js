@@ -58,6 +58,7 @@ const VALID_PERMISSIONS = [
   "approve_investments",
   "approve_redemptions",
   "manage_projects",
+  "manage_support",
 ];
 
 // Only super_admin can grant/change another admin's access — this is the
@@ -692,6 +693,84 @@ router.post("/projects/:id/updates", requirePermission("manage_projects"), (req,
   res.status(201).json({ update: listProjectUpdatesAdmin.all(project.id).find((u) => u.id === result.lastInsertRowid) });
 });
 
+// ---- Support tickets -----------------------------------------------------
+// "This didn't answer my question" escalations from the public AI assistant
+// widget (see routes/support.js) — the AI itself never persists a
+// conversation, so a ticket is the only durable record of what a visitor
+// asked and what the AI told them, plus a real human reply loop. Viewing is
+// open to any admin (matches the rest of this file's GET routes); replying
+// needs manage_support.
+
+const listSupportTickets = db.prepare(`
+  SELECT st.*, u.name AS user_name
+  FROM support_tickets st LEFT JOIN users u ON u.id = st.user_id
+  ORDER BY
+    CASE st.status WHEN 'open' THEN 0 WHEN 'in_progress' THEN 1 ELSE 2 END,
+    st.created_at DESC
+`);
+const getSupportTicket = db.prepare("SELECT * FROM support_tickets WHERE id = ?");
+const updateSupportTicket = db.prepare(`
+  UPDATE support_tickets SET status = ?, admin_reply = ?, replied_by = ?, replied_at = datetime('now')
+  WHERE id = ?
+`);
+const setSupportTicketStatus = db.prepare("UPDATE support_tickets SET status = ? WHERE id = ?");
+
+router.get("/support-tickets", (req, res) => {
+  const tickets = listSupportTickets.all().map((t) => ({
+    ...t,
+    conversation: t.conversation ? JSON.parse(t.conversation) : null,
+  }));
+  res.json({ tickets });
+});
+
+// Body: { status } alone just moves the ticket (e.g. to in_progress) with no
+// reply yet; { status, reply } also writes/overwrites the reply and emails
+// the requester. Both go through the same route since a status-only nudge
+// ("I'm looking into this") doesn't need a full reply.
+router.patch("/support-tickets/:id", requirePermission("manage_support"), (req, res) => {
+  const ticket = getSupportTicket.get(req.params.id);
+  if (!ticket) return res.status(404).json({ error: "Ticket not found." });
+
+  const { status, reply } = req.body || {};
+  const validStatuses = ["open", "in_progress", "resolved"];
+  const nextStatus = status && validStatuses.includes(status) ? status : ticket.status;
+
+  if (reply !== undefined) {
+    const trimmedReply = String(reply).trim();
+    if (!trimmedReply) return res.status(400).json({ error: "Enter a reply message." });
+    updateSupportTicket.run(nextStatus, trimmedReply, req.user.id, ticket.id);
+
+    if (ticket.user_id) {
+      notify(
+        ticket.user_id,
+        "support_ticket_reply",
+        "Our team replied to your support ticket.",
+        "/balance.html"
+      );
+    }
+    sendEmail({
+      to: ticket.email,
+      subject: "Re: your support ticket",
+      html: layout(
+        "We replied to your question",
+        `<p>You asked: <em>${ticket.message}</em></p>
+         <p>Our reply:</p>
+         <p>${trimmedReply}</p>`
+      ),
+    });
+  } else {
+    setSupportTicketStatus.run(nextStatus, ticket.id);
+  }
+
+  logAction(req.user.id, "support_ticket.reply", "support_ticket", ticket.id, {
+    email: ticket.email,
+    status: nextStatus,
+    replied: reply !== undefined,
+  });
+
+  res.json({ ticket: getSupportTicket.get(ticket.id) });
+});
+
 const listPendingInvestmentRequests = db.prepare(`
   SELECT ir.*, u.name AS user_name, u.email AS user_email, u.kyc_status, u.wallet_balance,
          p.title AS project_title
@@ -1027,6 +1106,7 @@ const AUDIT_LOG_ACTIONS = [
   "project.update_post",
   "redemption.approve",
   "redemption.reject",
+  "support_ticket.reply",
   "user.access_change",
   "user.pin_reset",
   "user.role_change",

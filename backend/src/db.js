@@ -309,6 +309,28 @@ db.exec(`
   );
 `);
 
+// Support ticket escalation — "this didn't answer my question" from the AI
+// assistant widget (see routes/support.js). user_id is nullable: the AI
+// assistant is public/no-login, so an anonymous visitor can escalate too,
+// identified only by the email they type in. conversation is a JSON string
+// of the {role, content} chat transcript at the moment they escalated, kept
+// for admin context since the AI assistant itself never persists history.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS support_tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    message TEXT NOT NULL,
+    conversation TEXT,
+    status TEXT NOT NULL DEFAULT 'open', -- open | in_progress | resolved
+    admin_reply TEXT,
+    replied_by INTEGER REFERENCES users(id),
+    replied_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
 function generateReferralCode() {
   return crypto.randomBytes(4).toString("hex").toUpperCase();
 }

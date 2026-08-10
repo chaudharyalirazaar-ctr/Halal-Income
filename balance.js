@@ -82,6 +82,7 @@ async function renderBalancePage() {
   });
 
   await renderProjectUpdatesFeed(investments);
+  await renderMySupportTickets();
 
   const depositsBody = document.getElementById("deposits-table-body");
   const { deposits } = await fetchJson("/api/wallet/deposits");
@@ -165,6 +166,52 @@ async function renderProjectUpdatesFeed(investments) {
       `<div style="display:flex; justify-content:space-between; gap:12px; font-size:0.8rem; opacity:0.7; margin-bottom:6px;">` +
       `<strong>${escapeHtml(u.projectName)}</strong><span>${fmtDate(u.created_at)}</span></div>` +
       `<p style="margin:0; white-space:pre-wrap;">${escapeHtml(u.message)}</p>`;
+    list.appendChild(card);
+  });
+}
+
+// ---- My support tickets --------------------------------------------------
+//
+// Questions escalated from the AI assistant widget on the homepage (see
+// index.html's "This didn't answer my question" form) and any reply our
+// team has posted. Hidden entirely for a user who's never escalated one.
+
+const SUPPORT_STATUS_LABEL = { open: "Open", in_progress: "In progress", resolved: "Resolved" };
+
+async function renderMySupportTickets() {
+  const section = document.getElementById("support-tickets-section");
+  const list = document.getElementById("support-tickets-list");
+
+  let tickets;
+  try {
+    ({ tickets } = await fetchJson("/api/support/tickets/mine"));
+  } catch {
+    section.style.display = "none";
+    return;
+  }
+
+  if (!tickets.length) {
+    section.style.display = "none";
+    return;
+  }
+
+  section.style.display = "block";
+  list.innerHTML = "";
+  tickets.forEach((t) => {
+    const card = document.createElement("div");
+    card.style.cssText = "border:1px solid var(--sand); border-radius:8px; padding:12px 14px;";
+    const replyHtml = t.admin_reply
+      ? `<div style="margin-top:8px; padding:10px 12px; background:var(--parchment); border-radius:8px;">
+           <p style="font-size:0.78rem; opacity:0.7; margin:0 0 4px;">Team reply — ${fmtDate(t.replied_at)}</p>
+           <p style="margin:0; white-space:pre-wrap;">${escapeHtml(t.admin_reply)}</p>
+         </div>`
+      : `<p style="margin:8px 0 0; font-size:0.82rem; opacity:0.6;">Awaiting a reply.</p>`;
+    card.innerHTML =
+      `<div style="display:flex; justify-content:space-between; gap:12px; font-size:0.8rem; opacity:0.7;">
+         <span>${fmtDate(t.created_at)}</span><strong>${SUPPORT_STATUS_LABEL[t.status]}</strong>
+       </div>
+       <p style="margin:6px 0 0; white-space:pre-wrap;">${escapeHtml(t.message)}</p>` +
+      replyHtml;
     list.appendChild(card);
   });
 }
