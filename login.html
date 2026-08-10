@@ -87,6 +87,9 @@
           <h1 data-i18n="auth.welcomeBack">Welcome back</h1>
           <p class="auth-subtitle" data-i18n="auth.loginSubtitle">Log in to your Halalincome account</p>
 
+          <p id="login-idle-notice" class="auth-error" style="display:none; color:var(--emerald); font-size:0.9rem; margin-bottom: 8px;">
+            You were logged out after a few minutes of inactivity, for your account's security. Log back in to continue.
+          </p>
           <p id="login-error" class="auth-error" style="display:none; color:#b3261e; font-size:0.9rem; margin-bottom: 8px;"></p>
 
           <form id="login-form" class="auth-form">
@@ -142,6 +145,10 @@
     const loginForm = document.getElementById("login-form");
     const twofaForm = document.getElementById("twofa-form");
     const errorEl = document.getElementById("login-error");
+
+    if (new URLSearchParams(window.location.search).get("reason") === "idle") {
+      document.getElementById("login-idle-notice").style.display = "block";
+    }
 
     loginForm.addEventListener("submit", async function (e) {
       e.preventDefault();

@@ -362,6 +362,96 @@ function wirePinForgotFlow() {
   });
 }
 
+// ---- Two-factor authentication -----------------------------------------
+//
+// Same backend endpoints admin.html uses (/api/auth/2fa/*) — they were
+// never admin-only, just never exposed outside the admin panel's UI.
+
+async function wireTwoFactor() {
+  const disabledView = document.getElementById("twofa-disabled-view");
+  const enabledView = document.getElementById("twofa-enabled-view");
+  const statusText = document.getElementById("twofa-status-text");
+  const startBtn = document.getElementById("twofa-start-setup-btn");
+  const setupPanel = document.getElementById("twofa-setup-panel");
+  const qrImg = document.getElementById("twofa-qr");
+  const secretText = document.getElementById("twofa-secret-text");
+  const enableCodeInput = document.getElementById("twofa-enable-code");
+  const setupError = document.getElementById("twofa-setup-error");
+  const confirmBtn = document.getElementById("twofa-confirm-enable-btn");
+  const disablePasswordInput = document.getElementById("twofa-disable-password");
+  const disableError = document.getElementById("twofa-disable-error");
+  const disableBtn = document.getElementById("twofa-disable-btn");
+
+  async function refreshStatus() {
+    const { enabled } = await fetchJson("/api/auth/2fa/status");
+    disabledView.style.display = enabled ? "none" : "block";
+    enabledView.style.display = enabled ? "block" : "none";
+    if (!enabled) statusText.textContent = "Status: not enabled";
+  }
+
+  startBtn.addEventListener("click", async () => {
+    startBtn.disabled = true;
+    try {
+      const res = await fetch("/api/auth/2fa/setup", { method: "POST", credentials: "same-origin" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Something went wrong.");
+      qrImg.src = data.qrCodeDataUrl;
+      secretText.textContent = "Manual entry code: " + data.secret;
+      setupPanel.style.display = "block";
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      startBtn.disabled = false;
+    }
+  });
+
+  confirmBtn.addEventListener("click", async () => {
+    setupError.style.display = "none";
+    confirmBtn.disabled = true;
+    try {
+      const res = await fetch("/api/auth/2fa/enable", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: enableCodeInput.value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Something went wrong.");
+      setupPanel.style.display = "none";
+      await refreshStatus();
+    } catch (err) {
+      setupError.textContent = err.message;
+      setupError.style.display = "block";
+    } finally {
+      confirmBtn.disabled = false;
+    }
+  });
+
+  disableBtn.addEventListener("click", async () => {
+    disableError.style.display = "none";
+    disableBtn.disabled = true;
+    try {
+      const res = await fetch("/api/auth/2fa/disable", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: disablePasswordInput.value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Something went wrong.");
+      disablePasswordInput.value = "";
+      await refreshStatus();
+    } catch (err) {
+      disableError.textContent = err.message;
+      disableError.style.display = "block";
+    } finally {
+      disableBtn.disabled = false;
+    }
+  });
+
+  refreshStatus();
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   const user = await Auth.currentUser();
 
@@ -373,5 +463,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   wireDepositModal();
   wireWithdrawModal();
   wirePinForms();
+  wireTwoFactor();
   renderBalancePage();
 });

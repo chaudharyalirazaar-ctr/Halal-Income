@@ -166,6 +166,43 @@
             </div>
           </div>
 
+          <div class="admin-section" id="twofa-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Two-factor authentication</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
+              Adds a second step to logging in — after your password, you'll also need a 6-digit
+              code from an authenticator app (Google Authenticator, Authy, 1Password, etc.).
+              Recommended for any account, since it protects your balance and withdrawal history
+              even if your password is ever compromised.
+            </p>
+
+            <div id="twofa-disabled-view">
+              <p id="twofa-status-text" style="margin-top:10px; font-weight:600;">Status: checking…</p>
+              <button type="button" class="btn btn-primary" id="twofa-start-setup-btn" style="margin-top:8px;">Enable 2FA</button>
+
+              <div id="twofa-setup-panel" style="display:none; margin-top:16px; max-width:420px;">
+                <p style="font-size:0.85rem;">1. Scan this QR code with your authenticator app (or enter the code manually).</p>
+                <img id="twofa-qr" alt="2FA QR code" style="max-width:200px; border:1px solid var(--sand); border-radius:8px;" />
+                <p style="font-size:0.8rem; word-break:break-all; opacity:0.7;" id="twofa-secret-text"></p>
+                <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600; margin-top:10px;">
+                  <span>2. Enter the 6-digit code it shows</span>
+                  <input type="text" id="twofa-enable-code" inputmode="numeric" maxlength="6" placeholder="123456" style="max-width:140px;" />
+                </label>
+                <p id="twofa-setup-error" style="display:none; color:#b3261e; font-size:0.85rem; margin-top:6px;"></p>
+                <button type="button" class="btn btn-primary" id="twofa-confirm-enable-btn" style="margin-top:10px;">Confirm and enable</button>
+              </div>
+            </div>
+
+            <div id="twofa-enabled-view" style="display:none;">
+              <p style="margin-top:10px; font-weight:600; color:var(--emerald);">✓ 2FA is enabled on your account.</p>
+              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600; max-width:260px; margin-top:10px;">
+                <span>Enter your password to disable</span>
+                <input type="password" id="twofa-disable-password" />
+              </label>
+              <p id="twofa-disable-error" style="display:none; color:#b3261e; font-size:0.85rem; margin-top:6px;"></p>
+              <button type="button" class="btn btn-danger" id="twofa-disable-btn" style="margin-top:10px;">Disable 2FA</button>
+            </div>
+          </div>
+
           <div class="admin-section" id="pin-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
             <h2 style="margin-top:0;">Security PIN</h2>
             <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
