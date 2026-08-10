@@ -840,6 +840,10 @@ router.get("/audit-log", requireRole(), (req, res) => {
     conditions.push("a.action = ?");
     params.push(req.query.action);
   }
+  if (req.query.adminId && /^\d+$/.test(req.query.adminId)) {
+    conditions.push("a.admin_id = ?");
+    params.push(Number(req.query.adminId));
+  }
   if (req.query.from) {
     conditions.push("date(a.created_at) >= date(?)");
     params.push(req.query.from);

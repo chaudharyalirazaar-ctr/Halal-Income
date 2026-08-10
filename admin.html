@@ -112,6 +112,12 @@
             </p>
             <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-top:14px;">
               <label style="display:grid; gap:4px; font-size:0.82rem; font-weight:600;">
+                <span>Admin</span>
+                <select id="audit-log-filter-admin" style="padding:7px 10px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body); min-width:200px;">
+                  <option value="">All admins</option>
+                </select>
+              </label>
+              <label style="display:grid; gap:4px; font-size:0.82rem; font-weight:600;">
                 <span>Action</span>
                 <select id="audit-log-filter-action" style="padding:7px 10px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body); min-width:200px;">
                   <option value="">All actions</option>
@@ -1114,9 +1120,11 @@
 
     function auditLogFilterParams() {
       const params = new URLSearchParams();
+      const adminId = document.getElementById("audit-log-filter-admin").value;
       const action = document.getElementById("audit-log-filter-action").value;
       const from = document.getElementById("audit-log-filter-from").value;
       const to = document.getElementById("audit-log-filter-to").value;
+      if (adminId) params.set("adminId", adminId);
       if (action) params.set("action", action);
       if (from) params.set("from", from);
       if (to) params.set("to", to);
@@ -1130,7 +1138,7 @@
       params.set("pageSize", AUDIT_LOG_PAGE_SIZE);
       const { entries, total, pageSize } = await api(`/api/admin/audit-log?${params.toString()}`);
 
-      const filtered = params.has("action") || params.has("from") || params.has("to");
+      const filtered = params.has("adminId") || params.has("action") || params.has("from") || params.has("to");
       document.getElementById("audit-log-count").textContent =
         `${total} total entr${total === 1 ? "y" : "ies"}${filtered ? " (filtered)" : ""}`;
 
@@ -1167,10 +1175,25 @@
     }
 
     async function wireAuditLogFilters() {
+      const adminSelect = document.getElementById("audit-log-filter-admin");
       const actionSelect = document.getElementById("audit-log-filter-action");
       const fromInput = document.getElementById("audit-log-filter-from");
       const toInput = document.getElementById("audit-log-filter-to");
       const clearBtn = document.getElementById("audit-log-filter-clear");
+
+      // allUsers is already loaded by loadUsers(), called just before this —
+      // reuse it rather than a separate request. Only ever lists *current*
+      // admins, so a since-demoted admin's past actions still show up in the
+      // log itself but drop out of this dropdown — acceptable trade-off for
+      // reusing data already on the page instead of a dedicated endpoint.
+      allUsers
+        .filter((u) => u.is_admin)
+        .forEach((u) => {
+          const opt = document.createElement("option");
+          opt.value = u.id;
+          opt.textContent = `${u.name} (${u.email})`;
+          adminSelect.appendChild(opt);
+        });
 
       const { actions } = await api("/api/admin/audit-log/actions");
       actions.forEach((a) => {
@@ -1182,10 +1205,12 @@
       });
 
       const refilter = () => loadAuditLog(1);
+      adminSelect.addEventListener("change", refilter);
       actionSelect.addEventListener("change", refilter);
       fromInput.addEventListener("change", refilter);
       toInput.addEventListener("change", refilter);
       clearBtn.addEventListener("click", () => {
+        adminSelect.value = "";
         actionSelect.value = "";
         fromInput.value = "";
         toInput.value = "";
