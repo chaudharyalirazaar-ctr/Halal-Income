@@ -104,6 +104,24 @@
             </div>
           </div>
 
+          <div class="admin-section" id="audit-log-section" style="display:none; border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Audit log</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:70ch;">
+              Every KYC/deposit/withdrawal/investment/redemption approval or rejection, every access
+              change, and every backup restore — who did it and when. Super admin only.
+            </p>
+            <p class="admin-section-count" id="audit-log-count" style="margin-top:10px;">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>When</th><th>Admin</th><th>Action</th><th>Target</th><th>Details</th></tr>
+                </thead>
+                <tbody id="audit-log-body"></tbody>
+              </table>
+            </div>
+            <div id="audit-log-pager" style="display:flex; align-items:center; gap:10px; margin-top:12px; font-size:0.85rem;"></div>
+          </div>
+
           <div class="admin-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
             <h2 style="margin-top:0;">Two-factor authentication</h2>
             <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
@@ -1056,6 +1074,65 @@
       document.getElementById("add-member-search").addEventListener("input", renderAddMemberResults);
     }
 
+    const AUDIT_LOG_PAGE_SIZE = 25;
+    let auditLogPage = 1;
+
+    // Turns {from, to, amount, reason, ...} style detail objects into a short
+    // human-readable line instead of dumping raw JSON in the table.
+    function formatAuditDetails(entry) {
+      const d = entry.details;
+      if (!d || typeof d !== "object") return "—";
+      const parts = [];
+      if (d.amount !== undefined) parts.push(`$${d.amount}`);
+      if (d.reason) parts.push(`reason: "${d.reason}"`);
+      if (d.from !== undefined || d.to !== undefined) {
+        const fromStr = typeof d.from === "object" ? JSON.stringify(d.from) : d.from;
+        const toStr = typeof d.to === "object" ? JSON.stringify(d.to) : d.to;
+        parts.push(`${fromStr} → ${toStr}`);
+      }
+      if (d.user_id !== undefined && !parts.length) parts.push(`user #${d.user_id}`);
+      if (d.safetyBackupPath) parts.push("safety backup saved");
+      return parts.length ? parts.join(", ") : JSON.stringify(d);
+    }
+
+    async function loadAuditLog(page) {
+      auditLogPage = page || auditLogPage;
+      const { entries, total, pageSize } = await api(`/api/admin/audit-log?page=${auditLogPage}&pageSize=${AUDIT_LOG_PAGE_SIZE}`);
+
+      document.getElementById("audit-log-count").textContent = `${total} total entr${total === 1 ? "y" : "ies"}`;
+
+      const body = document.getElementById("audit-log-body");
+      body.innerHTML = entries.length
+        ? ""
+        : '<tr><td colspan="5" class="admin-empty">No audit log entries yet.</td></tr>';
+      entries.forEach((e) => {
+        const tr = document.createElement("tr");
+        const target = e.target_id ? `${e.target_type} #${e.target_id}` : e.target_type;
+        tr.innerHTML =
+          `<td>${fmtDate(e.created_at)}</td>` +
+          `<td>${e.admin_name || "—"}<br/><span style="opacity:0.65; font-size:0.8rem;">${e.admin_email || ""}</span></td>` +
+          `<td>${e.action}</td>` +
+          `<td>${target}</td>` +
+          `<td style="font-size:0.85rem;">${formatAuditDetails(e)}</td>`;
+        body.appendChild(tr);
+      });
+
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const pager = document.getElementById("audit-log-pager");
+      if (totalPages <= 1) {
+        pager.innerHTML = "";
+      } else {
+        pager.innerHTML =
+          `<button type="button" class="btn btn-ghost btn-small" id="audit-log-prev-btn" ${auditLogPage <= 1 ? "disabled" : ""}>Previous</button>` +
+          `<span>Page ${auditLogPage} of ${totalPages}</span>` +
+          `<button type="button" class="btn btn-ghost btn-small" id="audit-log-next-btn" ${auditLogPage >= totalPages ? "disabled" : ""}>Next</button>`;
+        const prevBtn = document.getElementById("audit-log-prev-btn");
+        const nextBtn = document.getElementById("audit-log-next-btn");
+        if (prevBtn) prevBtn.addEventListener("click", () => loadAuditLog(auditLogPage - 1));
+        if (nextBtn) nextBtn.addEventListener("click", () => loadAuditLog(auditLogPage + 1));
+      }
+    }
+
     function wireRestoreForm() {
       const form = document.getElementById("restore-form");
       const fileInput = form.querySelector('input[name="backup"]');
@@ -1330,12 +1407,14 @@
       loadRedemptions();
       loadInvestmentRequests();
 
-      // Team & permissions is super-admin only — hidden entirely for anyone
-      // else, since the backend would 403 every action in it anyway.
+      // Team & permissions and the audit log are super-admin only — hidden
+      // entirely for anyone else, since the backend would 403 either anyway.
       if (user.role === "super_admin") {
         document.getElementById("team-permissions-section").style.display = "block";
+        document.getElementById("audit-log-section").style.display = "block";
         await loadUsers();
         loadTeamPermissions();
+        loadAuditLog(1);
       } else {
         loadUsers();
       }
