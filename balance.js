@@ -15,6 +15,12 @@ function fmtDate(s) {
   return isNaN(d) ? s : d.toLocaleString();
 }
 
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 const PAYMENT_METHOD_LABELS = {
   bank_transfer: "Bank transfer",
   usdt_trc20: "USDT (TRC20)",
@@ -75,6 +81,8 @@ async function renderBalancePage() {
     });
   });
 
+  await renderProjectUpdatesFeed(investments);
+
   const depositsBody = document.getElementById("deposits-table-body");
   const { deposits } = await fetchJson("/api/wallet/deposits");
   depositsBody.innerHTML = deposits.length
@@ -108,6 +116,56 @@ async function renderBalancePage() {
       `<td>${statusCell}</td>` +
       `<td>${fmtDate(w.requested_at)}</td>`;
     withdrawalsBody.appendChild(tr);
+  });
+}
+
+// ---- Project updates feed ----------------------------------------------
+//
+// Pulls updates from every distinct project the user has invested in (GET
+// /api/projects/:id/updates — public, same visibility as the project itself)
+// and merges them into one reverse-chronological feed. Old investments made
+// before project_id existed have it as null and are just skipped — nothing
+// to fetch updates for.
+
+async function renderProjectUpdatesFeed(investments) {
+  const section = document.getElementById("project-updates-section");
+  const list = document.getElementById("project-updates-list");
+
+  const projectIds = [...new Set(investments.map((i) => i.project_id).filter(Boolean))];
+  if (!projectIds.length) {
+    section.style.display = "none";
+    return;
+  }
+
+  const results = await Promise.all(
+    projectIds.map(async (id) => {
+      const projectName = (investments.find((i) => i.project_id === id) || {}).project || "Project";
+      try {
+        const { updates } = await fetchJson(`/api/projects/${id}/updates`);
+        return updates.map((u) => ({ ...u, projectName }));
+      } catch {
+        return [];
+      }
+    })
+  );
+
+  const allUpdates = results.flat().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  if (!allUpdates.length) {
+    section.style.display = "none";
+    return;
+  }
+
+  section.style.display = "block";
+  list.innerHTML = "";
+  allUpdates.forEach((u) => {
+    const card = document.createElement("div");
+    card.style.cssText = "border:1px solid var(--sand); border-radius:8px; padding:12px 14px;";
+    card.innerHTML =
+      `<div style="display:flex; justify-content:space-between; gap:12px; font-size:0.8rem; opacity:0.7; margin-bottom:6px;">` +
+      `<strong>${escapeHtml(u.projectName)}</strong><span>${fmtDate(u.created_at)}</span></div>` +
+      `<p style="margin:0; white-space:pre-wrap;">${escapeHtml(u.message)}</p>`;
+    list.appendChild(card);
   });
 }
 

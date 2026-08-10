@@ -1,6 +1,7 @@
 const express = require("express");
 const { db } = require("../db");
 const { requireAuth } = require("../middleware/auth");
+const { alertAdmins } = require("../lib/adminAlerts");
 
 const router = express.Router();
 
@@ -87,6 +88,14 @@ router.post("/redeem", requireAuth, (req, res) => {
 
   const usdtAmount = availablePoints / POINTS_PER_USDT;
   insertRedemption.run(req.user.id, availablePoints, usdtAmount);
+
+  alertAdmins({
+    type: "redemption_new",
+    message: `${req.user.name} requested to redeem ${availablePoints} referral points for $${usdtAmount.toFixed(2)}.`,
+    link: "/admin.html",
+    emailSubject: "New referral redemption awaiting review",
+    emailHtml: `<p><strong>${req.user.name}</strong> (${req.user.email}) requested to redeem <strong>${availablePoints} points</strong> for <strong>$${usdtAmount.toFixed(2)}</strong>. Log in to the admin panel to review it.</p>`,
+  });
 
   res.status(201).json({
     ok: true,

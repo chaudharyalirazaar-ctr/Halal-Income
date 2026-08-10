@@ -8,6 +8,7 @@ const { db } = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { availableBalance } = require("../lib/wallet");
 const { requirePin } = require("../lib/pin");
+const { alertAdmins } = require("../lib/adminAlerts");
 
 const router = express.Router();
 
@@ -114,6 +115,14 @@ router.post("/deposit", requireAuth, moneyActionLimiter, (req, res) => {
       throw err;
     }
 
+    alertAdmins({
+      type: "deposit_new",
+      message: `${req.user.name} submitted a new deposit request for $${amount}.`,
+      link: "/admin.html",
+      emailSubject: "New deposit request awaiting review",
+      emailHtml: `<p><strong>${req.user.name}</strong> (${req.user.email}) requested a deposit of <strong>$${amount}</strong>. Log in to the admin panel to review the payment proof.</p>`,
+    });
+
     res.status(201).json({
       ok: true,
       message: "Deposit request submitted. Our team will verify your payment proof and add it to your balance — no funds have moved automatically.",
@@ -146,6 +155,15 @@ router.post("/withdraw", requireAuth, moneyActionLimiter, requirePin, (req, res)
   }
 
   insertWithdrawal.run(req.user.id, Number(amount));
+
+  alertAdmins({
+    type: "withdrawal_new",
+    message: `${req.user.name} submitted a new withdrawal request for $${amount}.`,
+    link: "/admin.html",
+    emailSubject: "New withdrawal request awaiting review",
+    emailHtml: `<p><strong>${req.user.name}</strong> (${req.user.email}) requested a withdrawal of <strong>$${amount}</strong>. Log in to the admin panel to review it.</p>`,
+  });
+
   res.status(201).json({
     ok: true,
     message: "Withdrawal request submitted. It will be reviewed and paid out by an administrator — no funds have moved automatically.",

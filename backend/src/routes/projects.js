@@ -3,6 +3,7 @@ const rateLimit = require("express-rate-limit");
 const { db } = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { availableBalance } = require("../lib/wallet");
+const { alertAdmins } = require("../lib/adminAlerts");
 
 const router = express.Router();
 
@@ -54,6 +55,19 @@ router.get("/:id", (req, res) => {
   res.json({ project: withComputedFields(project) });
 });
 
+// Public, same visibility as the project itself (invest.html already shows
+// open projects to anyone) — investors read these from their Balance page.
+const listProjectUpdates = db.prepare(`
+  SELECT id, project_id, message, created_at FROM project_updates
+  WHERE project_id = ? ORDER BY created_at DESC
+`);
+
+router.get("/:id/updates", (req, res) => {
+  const project = getProjectWithRaised.get(req.params.id);
+  if (!project) return res.status(404).json({ error: "Project not found." });
+  res.json({ updates: listProjectUpdates.all(project.id) });
+});
+
 // Investing draws from the user's wallet balance (funded by admin-approved
 // deposits — see wallet.js) rather than needing its own payment proof. The
 // request still goes to admin for approval before it becomes a real
@@ -85,6 +99,15 @@ router.post("/:id/invest", requireAuth, investLimiter, (req, res) => {
   }
 
   insertInvestmentRequest.run(req.user.id, project.id, Number(amount));
+
+  alertAdmins({
+    type: "investment_request_new",
+    message: `${req.user.name} requested to invest $${amount} in ${project.title}.`,
+    link: "/admin.html",
+    emailSubject: "New investment request awaiting review",
+    emailHtml: `<p><strong>${req.user.name}</strong> (${req.user.email}) requested to invest <strong>$${amount}</strong> in <strong>${project.title}</strong>. Log in to the admin panel to review it.</p>`,
+  });
+
   res.status(201).json({
     ok: true,
     message: "Investment request submitted from your balance. Our team will review and confirm it — no funds are deducted until approved.",

@@ -382,12 +382,38 @@
             </div>
           </div>
 
+          <div class="admin-section" id="bulk-distribute-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Bulk distribute profit (by project)</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
+              Split a period's profit across every active investment in a project, proportional to how much each investor put in — faster than crediting investments one at a time once a project has more than a few investors. Still just one PIN to confirm the whole batch.
+            </p>
+
+            <form id="bulk-distribute-form" style="display:grid; gap:12px; max-width:420px; margin-top:14px;">
+              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                <span>Project</span>
+                <select name="projectId" id="bulk-distribute-project-select" required></select>
+              </label>
+              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                <span>Total profit this period ($)</span>
+                <input type="number" name="totalProfit" id="bulk-distribute-total" min="0.01" step="0.01" placeholder="e.g. 18400" />
+              </label>
+              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                <span>Investor share (%)</span>
+                <input type="number" name="sharePercent" id="bulk-distribute-percent" min="0.01" max="100" step="0.01" placeholder="e.g. 7" />
+              </label>
+            </form>
+
+            <div id="bulk-distribute-preview" style="margin-top:16px;"></div>
+            <p id="bulk-distribute-error" style="display:none; color:#b3261e; font-size:0.85rem; margin-top:8px; max-width:65ch;"></p>
+            <button type="button" class="btn btn-primary" id="bulk-distribute-confirm-btn" style="margin-top:10px;" disabled>Distribute to all</button>
+          </div>
+
           <div class="admin-section">
             <div class="admin-section-head">
-              <h2>Distribute profit</h2>
+              <h2>Distribute profit (single investment)</h2>
             </div>
             <p style="font-size:0.9rem; opacity:0.75; margin-top:-0.5rem;">
-              Credit a period's profit to an active investment. The investor claims it into their wallet balance from their Balance page.
+              Credit a period's profit to one active investment at a time. The investor claims it into their wallet balance from their Balance page.
             </p>
             <input
               type="search"
@@ -404,6 +430,29 @@
                 <tbody id="distribute-profit-body"></tbody>
               </table>
             </div>
+          </div>
+
+          <div class="admin-section" id="project-updates-admin-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Project updates</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
+              Post a short note investors will see on their Balance page — a production run finishing, a distribution going out, anything worth explaining beyond the numbers changing.
+            </p>
+
+            <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600; max-width:420px; margin-top:12px;">
+              <span>Project</span>
+              <select id="project-updates-project-select"></select>
+            </label>
+
+            <form id="project-update-form" style="display:grid; gap:10px; max-width:420px; margin-top:12px;">
+              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                <span>Update</span>
+                <textarea name="message" rows="3" required placeholder="e.g. August production run complete, profit distributed to investors."></textarea>
+              </label>
+              <p id="project-update-error" style="display:none; color:#b3261e; font-size:0.85rem;"></p>
+              <button type="submit" class="btn btn-primary" style="justify-self:start;">Post update</button>
+            </form>
+
+            <div id="project-update-history" style="display:grid; gap:10px; margin-top:16px;"></div>
           </div>
 
           <div class="admin-section">
@@ -726,8 +775,12 @@
       });
     }
 
+    let allProjects = [];
+
     async function loadProjects() {
       const { projects } = await api("/api/admin/projects");
+      allProjects = projects;
+      populateProjectPickers(projects);
       document.getElementById("projects-count").textContent = projects.length + " total";
       const body = document.getElementById("projects-body");
       body.innerHTML = "";
@@ -893,6 +946,7 @@
       const { investments } = await api("/api/admin/investments");
       allInvestments = investments;
       renderDistributeProfit();
+      renderBulkDistributePreview();
     }
 
     function renderDistributeProfit() {
@@ -979,6 +1033,177 @@
         row.querySelectorAll("button").forEach((b) => (b.disabled = false));
       }
     }
+
+    // ---- Bulk distribute profit (by project) --------------------------------
+
+    function populateProjectPickers(projects) {
+      const bulkSelect = document.getElementById("bulk-distribute-project-select");
+      const updatesSelect = document.getElementById("project-updates-project-select");
+      [bulkSelect, updatesSelect].forEach((select) => {
+        if (!select) return;
+        const prevValue = select.value;
+        select.innerHTML = projects.length
+          ? projects.map((p) => `<option value="${p.id}">${p.title}${p.status === "closed" ? " (closed)" : ""}</option>`).join("")
+          : '<option value="">No projects yet</option>';
+        if (prevValue && projects.some((p) => String(p.id) === prevValue)) {
+          select.value = prevValue;
+        }
+      });
+      renderBulkDistributePreview();
+      loadProjectUpdateHistory();
+    }
+
+    // Client-side preview only — an estimate so the admin can sanity-check
+    // before confirming. The backend recomputes the real, rounded split from
+    // scratch (never trusts a client-sent breakdown) when the request lands.
+    function renderBulkDistributePreview() {
+      const projectSelect = document.getElementById("bulk-distribute-project-select");
+      const previewEl = document.getElementById("bulk-distribute-preview");
+      const confirmBtn = document.getElementById("bulk-distribute-confirm-btn");
+      const errorEl = document.getElementById("bulk-distribute-error");
+      if (!projectSelect || !previewEl || !confirmBtn) return;
+      errorEl.style.display = "none";
+
+      const projectId = projectSelect.value;
+      const totalProfit = Number(document.getElementById("bulk-distribute-total").value);
+      const sharePercent = Number(document.getElementById("bulk-distribute-percent").value);
+
+      if (!projectId) {
+        previewEl.innerHTML = "";
+        confirmBtn.disabled = true;
+        return;
+      }
+
+      const active = allInvestments.filter((i) => String(i.project_id) === String(projectId) && i.status === "active");
+      if (!active.length) {
+        previewEl.innerHTML = '<p style="font-size:0.85rem; opacity:0.7;">This project has no active investments.</p>';
+        confirmBtn.disabled = true;
+        return;
+      }
+
+      if (!(totalProfit > 0) || !(sharePercent > 0) || sharePercent > 100) {
+        previewEl.innerHTML =
+          `<p style="font-size:0.85rem; opacity:0.7;">${active.length} active investment${active.length === 1 ? "" : "s"} ` +
+          `in this project. Enter a total profit and share % to preview the split.</p>`;
+        confirmBtn.disabled = true;
+        return;
+      }
+
+      const totalActive = active.reduce((sum, i) => sum + i.amount, 0);
+      const investorPool = totalProfit * (sharePercent / 100);
+      const rows = active
+        .map((i) => {
+          const share = totalActive > 0 ? (i.amount / totalActive) * investorPool : 0;
+          return `<tr><td>${i.user_name}</td><td>${money(i.amount)}</td><td>${money(share)}</td></tr>`;
+        })
+        .join("");
+
+      previewEl.innerHTML =
+        `<p style="font-size:0.85rem; font-weight:600;">Investor pool: ${money(investorPool)} across ` +
+        `${active.length} investment${active.length === 1 ? "" : "s"} (estimate — the server computes the final rounded amounts)</p>` +
+        `<div class="table-card" style="margin-top:8px;"><table class="analytics-table"><thead><tr>` +
+        `<th>Investor</th><th>Amount invested</th><th>Estimated share</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+
+      confirmBtn.disabled = false;
+    }
+
+    document.getElementById("bulk-distribute-project-select").addEventListener("change", renderBulkDistributePreview);
+    document.getElementById("bulk-distribute-total").addEventListener("input", renderBulkDistributePreview);
+    document.getElementById("bulk-distribute-percent").addEventListener("input", renderBulkDistributePreview);
+
+    document.getElementById("bulk-distribute-confirm-btn").addEventListener("click", async () => {
+      const projectId = document.getElementById("bulk-distribute-project-select").value;
+      const totalProfit = Number(document.getElementById("bulk-distribute-total").value);
+      const sharePercent = Number(document.getElementById("bulk-distribute-percent").value);
+      const project = allProjects.find((p) => String(p.id) === String(projectId));
+      const errorEl = document.getElementById("bulk-distribute-error");
+      errorEl.style.display = "none";
+
+      const estimatedPool = totalProfit * (sharePercent / 100);
+      if (!confirm(`Distribute ${money(estimatedPool)} across every active investment in "${project ? project.title : "this project"}"? This cannot be undone.`)) return;
+
+      const pin = promptForPin();
+      if (pin === null) return;
+
+      const btn = document.getElementById("bulk-distribute-confirm-btn");
+      btn.disabled = true;
+      try {
+        const result = await api(`/api/admin/projects/${projectId}/distribute-profit-bulk`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ totalProfit, sharePercent, pin }),
+        });
+        alert(`Distributed ${money(result.investorPool)} across ${result.investmentCount} investment${result.investmentCount === 1 ? "" : "s"}.`);
+        document.getElementById("bulk-distribute-form").reset();
+        document.getElementById("bulk-distribute-preview").innerHTML = "";
+        loadDistributeProfit();
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = "block";
+      } finally {
+        renderBulkDistributePreview();
+      }
+    });
+
+    // ---- Project updates ------------------------------------------------------
+
+    async function loadProjectUpdateHistory() {
+      const select = document.getElementById("project-updates-project-select");
+      const historyEl = document.getElementById("project-update-history");
+      if (!select || !historyEl) return;
+      const projectId = select.value;
+      if (!projectId) {
+        historyEl.innerHTML = "";
+        return;
+      }
+      const { updates } = await api(`/api/admin/projects/${projectId}/updates`);
+      historyEl.innerHTML = updates.length
+        ? updates
+            .map(
+              (u) =>
+                `<div style="border:1px solid var(--sand); border-radius:8px; padding:10px 12px;">
+                   <div style="display:flex; justify-content:space-between; gap:12px; font-size:0.78rem; opacity:0.7; margin-bottom:4px;">
+                     <span>${u.admin_name || "Admin"}</span><span>${fmtDate(u.created_at)}</span>
+                   </div>
+                   <p style="margin:0; white-space:pre-wrap;">${u.message}</p>
+                 </div>`
+            )
+            .join("")
+        : '<p style="font-size:0.85rem; opacity:0.7;">No updates posted yet for this project.</p>';
+    }
+
+    document.getElementById("project-updates-project-select").addEventListener("change", loadProjectUpdateHistory);
+
+    document.getElementById("project-update-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const projectId = document.getElementById("project-updates-project-select").value;
+      const form = e.target;
+      const errorEl = document.getElementById("project-update-error");
+      errorEl.style.display = "none";
+
+      if (!projectId) {
+        errorEl.textContent = "Select a project first.";
+        errorEl.style.display = "block";
+        return;
+      }
+
+      const submitBtn = form.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      try {
+        await api(`/api/admin/projects/${projectId}/updates`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: form.message.value }),
+        });
+        form.reset();
+        loadProjectUpdateHistory();
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = "block";
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
 
     const USERS_PAGE_SIZE = 25;
     let allUsers = [];

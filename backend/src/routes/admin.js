@@ -274,6 +274,112 @@ router.post(
   }
 );
 
+// Splits a period's total profit across every active investment in one
+// project, proportional to how much each investor put in — the alternative
+// to distributing one investment at a time, which doesn't scale once a
+// project has more than a handful of investors. investorPool is the slice
+// of totalProfit investors actually get (totalProfit * sharePercent / 100);
+// the rest stays with the operator, same split concept as the "Distributed
+// to investors (7%)" example on the homepage.
+const listActiveInvestmentsByProject = db.prepare(`
+  SELECT i.*, u.name AS user_name, u.email AS user_email
+  FROM investments i JOIN users u ON u.id = i.user_id
+  WHERE i.project_id = ? AND i.status = 'active'
+  ORDER BY i.amount DESC
+`);
+
+router.post(
+  "/projects/:id/distribute-profit-bulk",
+  requirePermission("approve_investments"),
+  sensitiveActionLimiter,
+  requirePin,
+  (req, res) => {
+    const project = getProject.get(req.params.id);
+    if (!project) return res.status(404).json({ error: "Project not found." });
+
+    const { totalProfit, sharePercent } = req.body || {};
+    if (!(totalProfit > 0)) return res.status(400).json({ error: "Enter a positive total profit amount." });
+    if (!(sharePercent > 0) || Number(sharePercent) > 100) {
+      return res.status(400).json({ error: "Investor share % must be a number between 0 and 100." });
+    }
+
+    const investments = listActiveInvestmentsByProject.all(project.id);
+    if (!investments.length) {
+      return res.status(400).json({ error: "This project has no active investments to distribute to." });
+    }
+
+    const totalActive = investments.reduce((sum, i) => sum + i.amount, 0);
+    const investorPool = Number(totalProfit) * (Number(sharePercent) / 100);
+
+    // Proportional split, rounded to cents. Naive per-row rounding can leave
+    // the sum a cent or two short of/over investorPool — the last row
+    // absorbs that remainder so the batch total matches exactly what the
+    // admin entered instead of silently drifting.
+    let allocated = 0;
+    const breakdown = investments.map((inv, idx) => {
+      let share;
+      if (idx === investments.length - 1) {
+        share = Math.round((investorPool - allocated) * 100) / 100;
+      } else {
+        share = Math.round((inv.amount / totalActive) * investorPool * 100) / 100;
+        allocated += share;
+      }
+      return { investment: inv, share: Math.max(0, share) };
+    });
+
+    db.exec("BEGIN");
+    try {
+      for (const { investment, share } of breakdown) {
+        if (share <= 0) continue;
+        addProfit.run(share, investment.id);
+        insertEarningsEvent.run(investment.id, investment.user_id, share);
+      }
+      db.exec("COMMIT");
+    } catch (err) {
+      db.exec("ROLLBACK");
+      throw err;
+    }
+
+    const paidBreakdown = breakdown.filter((b) => b.share > 0);
+
+    logAction(req.user.id, "investment.distribute_profit_bulk", "project", project.id, {
+      project: project.title,
+      totalProfit: Number(totalProfit),
+      sharePercent: Number(sharePercent),
+      investorPool,
+      investmentCount: paidBreakdown.length,
+      breakdown: paidBreakdown.map((b) => ({
+        investment_id: b.investment.id,
+        user_id: b.investment.user_id,
+        share: b.share,
+      })),
+    });
+
+    paidBreakdown.forEach(({ investment, share }) => {
+      notify(
+        investment.user_id,
+        "profit_distributed",
+        `You received $${share.toFixed(2)} profit on your investment in ${project.title}. Claim it from your Balance page.`,
+        "/balance.html"
+      );
+      const investor = getUserById.get(investment.user_id);
+      if (investor) {
+        sendEmail({
+          to: investor.email,
+          subject: "You've received a profit distribution",
+          html: layout(
+            "Profit distributed",
+            `<p>Your investment in <strong>${project.title}</strong> was credited <strong>$${share.toFixed(2)}</strong> in profit this period.</p>
+             <p>Log in and visit your Balance page to claim it into your wallet balance.</p>`
+          ),
+        });
+      }
+    });
+
+    res.json({ ok: true, investorPool, investmentCount: paidBreakdown.length });
+  }
+);
+
 router.post(
   "/investments/:id/complete",
   requirePermission("approve_investments"),
@@ -529,6 +635,61 @@ router.patch("/projects/:id", requirePermission("manage_projects"), (req, res) =
 
   updateProjectFields.run(next);
   res.json({ project: getProject.get(existing.id) });
+});
+
+// ---- Project update posts -----------------------------------------------
+// Short admin-written notes ("August production run complete, profit
+// distributed") shown to investors on their Balance page — numbers changing
+// isn't the only signal an investor gets. Viewing is open to any admin
+// (matches how the rest of /projects works); posting needs manage_projects.
+
+const listProjectUpdatesAdmin = db.prepare(`
+  SELECT pu.*, a.name AS admin_name
+  FROM project_updates pu LEFT JOIN users a ON a.id = pu.admin_id
+  WHERE pu.project_id = ?
+  ORDER BY pu.created_at DESC
+`);
+const insertProjectUpdate = db.prepare(`
+  INSERT INTO project_updates (project_id, admin_id, message) VALUES (?, ?, ?)
+`);
+const listInvestorIdsForProject = db.prepare(`
+  SELECT DISTINCT user_id FROM investments WHERE project_id = ?
+`);
+
+router.get("/projects/:id/updates", (req, res) => {
+  const project = getProject.get(req.params.id);
+  if (!project) return res.status(404).json({ error: "Project not found." });
+  res.json({ updates: listProjectUpdatesAdmin.all(project.id) });
+});
+
+router.post("/projects/:id/updates", requirePermission("manage_projects"), (req, res) => {
+  const project = getProject.get(req.params.id);
+  if (!project) return res.status(404).json({ error: "Project not found." });
+
+  const { message } = req.body || {};
+  const trimmed = String(message || "").trim();
+  if (!trimmed) return res.status(400).json({ error: "Enter an update message." });
+  if (trimmed.length > 2000) return res.status(400).json({ error: "Keep the update under 2000 characters." });
+
+  const result = insertProjectUpdate.run(project.id, req.user.id, trimmed);
+
+  logAction(req.user.id, "project.update_post", "project", project.id, {
+    project: project.title,
+    message: trimmed,
+  });
+
+  // In-app only (not email) — an update is lower-stakes than a money event,
+  // and investors already get a bell notification, no need to also inbox them.
+  listInvestorIdsForProject.all(project.id).forEach((row) => {
+    notify(
+      row.user_id,
+      "project_update",
+      `New update on ${project.title}: "${trimmed.length > 80 ? trimmed.slice(0, 77) + "…" : trimmed}"`,
+      "/balance.html"
+    );
+  });
+
+  res.status(201).json({ update: listProjectUpdatesAdmin.all(project.id).find((u) => u.id === result.lastInsertRowid) });
 });
 
 const listPendingInvestmentRequests = db.prepare(`
@@ -858,10 +1019,12 @@ const AUDIT_LOG_ACTIONS = [
   "deposit.reject",
   "investment.complete",
   "investment.distribute_profit",
+  "investment.distribute_profit_bulk",
   "investment_request.approve",
   "investment_request.reject",
   "kyc.approve",
   "kyc.reject",
+  "project.update_post",
   "redemption.approve",
   "redemption.reject",
   "user.access_change",

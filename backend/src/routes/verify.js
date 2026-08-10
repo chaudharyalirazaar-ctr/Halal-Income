@@ -7,6 +7,7 @@ const rateLimit = require("express-rate-limit");
 const { db } = require("../db");
 const { requireAuth } = require("../middleware/auth");
 const { sendEmail, layout } = require("../lib/mailer");
+const { alertAdmins } = require("../lib/adminAlerts");
 
 const router = express.Router();
 
@@ -133,6 +134,14 @@ router.post("/kyc", requireAuth, (req, res) => {
     const relativePath = path.relative(path.join(__dirname, "..", "..", "data"), req.file.path);
     insertKyc.run(req.user.id, relativePath, req.file.originalname);
     setKycPending.run(req.user.id);
+
+    alertAdmins({
+      type: "kyc_new",
+      message: `${req.user.name} submitted a new KYC document for review.`,
+      link: "/admin.html",
+      emailSubject: "New KYC submission awaiting review",
+      emailHtml: `<p><strong>${req.user.name}</strong> (${req.user.email}) submitted a new KYC document. Log in to the admin panel to review it.</p>`,
+    });
 
     res.status(201).json({ kyc: "pending" });
   });

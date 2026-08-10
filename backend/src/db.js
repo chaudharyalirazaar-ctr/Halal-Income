@@ -294,6 +294,21 @@ if (!userColumns.some((c) => c.name === "security_pin_hash")) {
   }
 });
 
+// Project update posts — short admin-written notes ("August production run
+// complete, profit distributed") shown to investors on their Balance page,
+// so the numbers changing isn't the only signal an investor ever gets.
+// Public to view (matches how projects themselves are public on
+// invest.html) — only admins with manage_projects can post one.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS project_updates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    admin_id INTEGER REFERENCES users(id),
+    message TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
 function generateReferralCode() {
   return crypto.randomBytes(4).toString("hex").toUpperCase();
 }
