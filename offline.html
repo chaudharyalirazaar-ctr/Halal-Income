@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>You're offline — Halal Income</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml" />
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #F1EDE1;
+      color: #1F4A3D;
+      font-family: Georgia, 'Times New Roman', serif;
+      text-align: center;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .card { max-width: 420px; }
+    img { width: 72px; height: 72px; margin-bottom: 16px; }
+    h1 { font-size: 1.4rem; margin: 0 0 12px; }
+    p { color: #4A4A42; line-height: 1.5; margin: 0 0 20px; }
+    button {
+      background: #B8925A;
+      color: #F1EDE1;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:hover { background: #96754A; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="logo.svg" alt="Halal Income logo" />
+    <h1>You're offline</h1>
+    <p>
+      This page needs a connection to load — your account balance and
+      investment data are never shown from a cached copy. Reconnect and
+      try again.
+    </p>
+    <button type="button" onclick="location.reload()">Retry</button>
+  </div>
+</body>
+</html>
