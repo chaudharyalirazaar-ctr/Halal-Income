@@ -299,6 +299,67 @@ function wirePinForms() {
   });
 
   refreshPinStatus();
+  wirePinForgotFlow();
+}
+
+function wirePinForgotFlow() {
+  const toggleBtn = document.getElementById("pin-forgot-toggle");
+  const panel = document.getElementById("pin-forgot-panel");
+  const sendBtn = document.getElementById("pin-forgot-send-btn");
+  const form = document.getElementById("pin-forgot-form");
+  const errorEl = document.getElementById("pin-forgot-error");
+  const successEl = document.getElementById("pin-forgot-success");
+
+  toggleBtn.addEventListener("click", () => {
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+  });
+
+  sendBtn.addEventListener("click", async () => {
+    errorEl.style.display = "none";
+    successEl.style.display = "none";
+    sendBtn.disabled = true;
+    try {
+      const res = await fetch("/api/auth/pin/forgot", { method: "POST", credentials: "same-origin" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Something went wrong.");
+      form.style.display = "grid";
+      successEl.textContent = "Code sent — check your email.";
+      successEl.style.display = "block";
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = "block";
+    } finally {
+      sendBtn.disabled = false;
+    }
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorEl.style.display = "none";
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    try {
+      const res = await fetch("/api/auth/pin/reset", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: form.code.value, pin: form.pin.value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Something went wrong.");
+      form.reset();
+      form.style.display = "none";
+      panel.style.display = "none";
+      successEl.style.display = "none";
+      alert("PIN reset. Use your new PIN from now on.");
+      await refreshPinStatus();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = "block";
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", async () => {

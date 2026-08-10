@@ -195,6 +195,29 @@
                 <p id="pin-change-error" style="display:none; color:#b3261e; font-size:0.85rem;"></p>
                 <button type="submit" class="btn btn-primary" style="justify-self:start;">Change PIN</button>
               </form>
+
+              <p style="margin-top:16px;">
+                <button type="button" id="pin-forgot-toggle" class="btn btn-ghost btn-small">Forgot your PIN?</button>
+              </p>
+              <div id="pin-forgot-panel" style="display:none; margin-top:10px; max-width:320px;">
+                <p style="font-size:0.85rem; opacity:0.75;">
+                  We'll email a 6-digit code to your account's email address. Enter it below along with a new PIN.
+                </p>
+                <button type="button" id="pin-forgot-send-btn" class="btn btn-ghost btn-small">Send code to my email</button>
+                <form id="pin-forgot-form" style="display:none; gap:10px; margin-top:12px;">
+                  <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                    <span>6-digit code from your email</span>
+                    <input type="text" name="code" inputmode="numeric" maxlength="6" required placeholder="123456" />
+                  </label>
+                  <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                    <span>New PIN</span>
+                    <input type="text" name="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required placeholder="1234" />
+                  </label>
+                  <p id="pin-forgot-error" style="display:none; color:#b3261e; font-size:0.85rem;"></p>
+                  <p id="pin-forgot-success" style="display:none; color:var(--emerald); font-size:0.85rem;"></p>
+                  <button type="submit" class="btn btn-primary" style="justify-self:start;">Reset PIN</button>
+                </form>
+              </div>
             </div>
           </div>
         </div>

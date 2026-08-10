@@ -31,7 +31,8 @@ const sensitiveActionLimiter = rateLimit({
 // ---- Users -----------------------------------------------------------
 
 const listUsers = db.prepare(`
-  SELECT id, name, email, phone, is_admin, role, permissions, email_verified, kyc_status, referral_code, wallet_balance, total_withdrawn, created_at
+  SELECT id, name, email, phone, is_admin, role, permissions, email_verified, kyc_status, referral_code, wallet_balance, total_withdrawn, created_at,
+    (security_pin_hash IS NOT NULL) AS pin_set
   FROM users ORDER BY created_at DESC
 `);
 const getUserByIdForRole = db.prepare("SELECT * FROM users WHERE id = ?");
@@ -92,6 +93,35 @@ router.patch("/users/:id/permissions", requireRole(), (req, res) => {
     to: { role, permissions: finalPermissions, isAdmin: !!isAdmin },
   });
   res.json({ user: userWithParsedPermissions(listUsers.all().find((u) => u.id === target.id)) });
+});
+
+// Fallback for when a user can't use the self-service email-code recovery
+// (POST /api/auth/pin/forgot) — e.g. they've also lost access to their
+// email. Clears the PIN entirely; they set a fresh one themselves the normal
+// way (which only needs their password once no PIN is set). super_admin
+// only, and logged, since this is the one other action besides granting
+// access itself that can affect another account's security.
+const clearUserPin = db.prepare("UPDATE users SET security_pin_hash = NULL WHERE id = ?");
+
+router.post("/users/:id/reset-pin", requireRole(), (req, res) => {
+  const target = getUserByIdForRole.get(req.params.id);
+  if (!target) return res.status(404).json({ error: "User not found." });
+  if (!target.security_pin_hash) return res.status(400).json({ error: "This user doesn't have a PIN set." });
+
+  clearUserPin.run(target.id);
+  logAction(req.user.id, "user.pin_reset", "user", target.id, {});
+  notify(target.id, "pin_reset", "An admin reset your security PIN. Set a new one from your account page.", "/balance.html");
+  sendEmail({
+    to: target.email,
+    subject: "Your security PIN was reset",
+    html: layout(
+      "PIN reset",
+      `<p>An admin reset the security PIN on your account, at your request. Log in and set a new one — you'll just need your password this time.</p>
+       <p>If you didn't request this, contact us immediately.</p>`
+    ),
+  });
+
+  res.json({ ok: true });
 });
 
 // ---- KYC review --------------------------------------------------------

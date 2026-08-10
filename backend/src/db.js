@@ -45,6 +45,19 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  -- Self-service recovery for a forgotten security PIN — the logged-in user
+  -- (proven by session cookie + this code landing in their own inbox) can
+  -- set a fresh PIN without knowing the old one. See POST /api/auth/pin/forgot
+  -- and /api/auth/pin/reset.
+  CREATE TABLE IF NOT EXISTS pin_reset_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    code TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    consumed INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS kyc_submissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

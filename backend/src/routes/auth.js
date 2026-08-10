@@ -263,6 +263,78 @@ router.post("/pin/remove", requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// ---- Forgot PIN (self-service recovery) ------------------------------------
+// Setting/changing a PIN normally requires the current PIN — by design, so a
+// stolen password alone can't silently swap it out. But that leaves no way
+// back in if you genuinely forget it. This is the recovery path: since
+// you're already logged in (proven by session cookie), a one-time code sent
+// to your own email is a reasonable second factor to let you set a fresh PIN
+// without the old one — same trust model as the account's email verification
+// codes, just for a different purpose.
+
+const PIN_RESET_CODE_TTL_MINUTES = 10;
+
+const pinForgotLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests. Try again later." },
+});
+
+const insertPinResetCode = db.prepare(`
+  INSERT INTO pin_reset_codes (user_id, code, expires_at) VALUES (?, ?, ?)
+`);
+const getLatestPinResetCode = db.prepare(`
+  SELECT * FROM pin_reset_codes WHERE user_id = ? AND consumed = 0 ORDER BY id DESC LIMIT 1
+`);
+const consumePinResetCode = db.prepare("UPDATE pin_reset_codes SET consumed = 1 WHERE id = ?");
+
+router.post("/pin/forgot", requireAuth, pinForgotLimiter, (req, res) => {
+  if (!req.user.security_pin_hash) {
+    return res.status(400).json({ error: "No PIN is set yet — just set one directly." });
+  }
+
+  const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+  const expiresAt = new Date(Date.now() + PIN_RESET_CODE_TTL_MINUTES * 60 * 1000).toISOString();
+  insertPinResetCode.run(req.user.id, code, expiresAt);
+
+  sendEmail({
+    to: req.user.email,
+    subject: `Your PIN reset code: ${code}`,
+    html: layout(
+      "Reset your security PIN",
+      `<p>Someone (hopefully you) requested to reset the PIN on your account. Enter this code to set a new one:</p>
+       <p style="font-size: 28px; font-weight: 700; letter-spacing: 4px; margin: 16px 0;">${code}</p>
+       <p>This code expires in ${PIN_RESET_CODE_TTL_MINUTES} minutes. If you didn't request this, you can ignore it — your current PIN still works.</p>`
+    ),
+  });
+
+  const response = { sent: true };
+  if (process.env.NODE_ENV !== "production") response.devCode = code;
+  res.json(response);
+});
+
+router.post("/pin/reset", requireAuth, (req, res) => {
+  const { code, pin } = req.body || {};
+  if (!isValidPinFormat(pin)) {
+    return res.status(400).json({ error: "PIN must be exactly 4 digits." });
+  }
+
+  const latest = getLatestPinResetCode.get(req.user.id);
+  if (!latest) return res.status(400).json({ error: "No pending reset code. Request a new one." });
+  if (new Date(latest.expires_at) < new Date()) {
+    return res.status(400).json({ error: "That code has expired. Request a new one." });
+  }
+  if (!code || String(code).trim() !== latest.code) {
+    return res.status(400).json({ error: "Incorrect code." });
+  }
+
+  consumePinResetCode.run(latest.id);
+  setSecurityPin.run(bcrypt.hashSync(String(pin), 10), req.user.id);
+  res.json({ ok: true });
+});
+
 router.post("/forgot-password", forgotPasswordLimiter, (req, res) => {
   const { email } = req.body || {};
   if (!email || !EMAIL_RE.test(email)) {
