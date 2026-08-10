@@ -376,6 +376,30 @@
 
           <div class="admin-section">
             <div class="admin-section-head">
+              <h2>Distribute profit</h2>
+            </div>
+            <p style="font-size:0.9rem; opacity:0.75; margin-top:-0.5rem;">
+              Credit a period's profit to an active investment. The investor claims it into their wallet balance from their Balance page.
+            </p>
+            <input
+              type="search"
+              id="distribute-profit-search"
+              placeholder="Search by investor name, email, or project…"
+              style="width:100%; max-width:320px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);"
+            />
+            <p class="admin-section-count" id="distribute-profit-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>Investor</th><th>Email</th><th>Project</th><th>Amount invested</th><th>Unclaimed profit</th><th>Status</th><th>Started</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="distribute-profit-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
               <h2>All users</h2>
               <div class="admin-export-links">
                 <a href="/api/admin/export/users/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
@@ -852,6 +876,99 @@
         );
         body.appendChild(tr);
       });
+    }
+
+    let allInvestments = [];
+
+    async function loadDistributeProfit() {
+      const { investments } = await api("/api/admin/investments");
+      allInvestments = investments;
+      renderDistributeProfit();
+    }
+
+    function renderDistributeProfit() {
+      const query = document.getElementById("distribute-profit-search").value.trim().toLowerCase();
+      const filtered = query
+        ? allInvestments.filter(
+            (i) =>
+              i.user_name.toLowerCase().includes(query) ||
+              i.user_email.toLowerCase().includes(query) ||
+              i.project.toLowerCase().includes(query)
+          )
+        : allInvestments;
+
+      const active = allInvestments.filter((i) => i.status === "active").length;
+      document.getElementById("distribute-profit-count").textContent = allInvestments.length
+        ? `${active} active, ${allInvestments.length} total`
+        : "No investments yet.";
+
+      const body = document.getElementById("distribute-profit-body");
+      body.innerHTML = "";
+      if (!filtered.length) {
+        body.innerHTML = '<tr><td colspan="8" class="admin-empty">No investments match.</td></tr>';
+        return;
+      }
+      filtered.forEach((i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+          `<td>${i.user_name}</td>` +
+          `<td>${i.user_email}</td>` +
+          `<td>${i.project}</td>` +
+          `<td>${money(i.amount)}</td>` +
+          `<td>${money(i.profit_this_period)}</td>` +
+          `<td>${i.status}</td>` +
+          `<td>${fmtDate(i.created_at)}</td>` +
+          `<td class="admin-actions">
+             <button type="button" class="btn btn-primary btn-small" data-action="distribute"${i.status !== "active" ? " disabled" : ""}>Distribute profit</button>
+             <button type="button" class="btn btn-ghost btn-small" data-action="complete"${i.status !== "active" ? " disabled" : ""}>Mark completed</button>
+           </td>`;
+        tr.querySelector('[data-action="distribute"]').addEventListener("click", (e) => distributeProfit(i, e.target));
+        tr.querySelector('[data-action="complete"]').addEventListener("click", (e) => completeInvestment(i, e.target));
+        body.appendChild(tr);
+      });
+    }
+
+    async function distributeProfit(investment, btn) {
+      const amountStr = window.prompt(
+        `Profit amount to credit to ${investment.user_name}'s investment in ${investment.project}:`,
+        ""
+      );
+      if (amountStr === null) return;
+      const amount = Number(amountStr);
+      if (!(amount > 0)) {
+        alert("Enter a positive number.");
+        return;
+      }
+      const pin = promptForPin();
+      if (pin === null) return;
+
+      const row = btn.closest("tr");
+      row.querySelectorAll("button").forEach((b) => (b.disabled = true));
+      try {
+        await api(`/api/admin/investments/${investment.id}/distribute-profit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount, pin }),
+        });
+        loadDistributeProfit();
+      } catch (err) {
+        alert(err.message);
+        row.querySelectorAll("button").forEach((b) => (b.disabled = false));
+      }
+    }
+
+    async function completeInvestment(investment, btn) {
+      if (!confirm(`Mark ${investment.user_name}'s investment in ${investment.project} as completed? This stops further profit distributions.`)) return;
+
+      const row = btn.closest("tr");
+      row.querySelectorAll("button").forEach((b) => (b.disabled = true));
+      try {
+        await api(`/api/admin/investments/${investment.id}/complete`, { method: "POST" });
+        loadDistributeProfit();
+      } catch (err) {
+        alert(err.message);
+        row.querySelectorAll("button").forEach((b) => (b.disabled = false));
+      }
     }
 
     const USERS_PAGE_SIZE = 25;
@@ -1484,6 +1601,7 @@
         usersPage = 1;
         renderUsersPage();
       });
+      document.getElementById("distribute-profit-search").addEventListener("input", renderDistributeProfit);
       loadAnalytics();
       loadProjects();
       loadKyc();
@@ -1491,6 +1609,7 @@
       loadWithdrawals();
       loadRedemptions();
       loadInvestmentRequests();
+      loadDistributeProfit();
 
       // Team & permissions and the audit log are super-admin only — hidden
       // entirely for anyone else, since the backend would 403 either anyway.

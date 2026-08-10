@@ -206,7 +206,7 @@ async function main() {
 
   console.log("10. Admin distributes profit, user claims it");
   const distributeRes = await admin.post(`/api/admin/investments/${newInvestment.id}/distribute-profit`, {
-    json: { amount: PROFIT_AMOUNT },
+    json: { amount: PROFIT_AMOUNT, pin: ADMIN_PIN },
   });
   assert(distributeRes.ok, "admin distributes profit");
 

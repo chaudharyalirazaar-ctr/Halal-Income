@@ -206,10 +206,14 @@ router.post("/kyc/:id/reject", requirePermission("approve_kyc"), requirePin, (re
 });
 
 // ---- Investments & profit distribution ---------------------------------
+// This is how investors actually get paid: an admin periodically credits
+// each active investment its share of that period's real profit, which the
+// investor then claims into their wallet balance (see POST /investments/:id/
+// claim in investments.js) and can withdraw from there. Gated the same way
+// as every other money-moving admin action — permission + PIN + audit log —
+// since this is the one action in the whole panel that can conjure money
+// out of nowhere if it were ever left unprotected.
 
-const insertInvestment = db.prepare(`
-  INSERT INTO investments (user_id, project, amount) VALUES (?, ?, ?)
-`);
 const getInvestment = db.prepare("SELECT * FROM investments WHERE id = ?");
 const addProfit = db.prepare(`
   UPDATE investments SET profit_this_period = profit_this_period + ? WHERE id = ?
@@ -218,33 +222,72 @@ const insertEarningsEvent = db.prepare(`
   INSERT INTO earnings_events (investment_id, user_id, amount) VALUES (?, ?, ?)
 `);
 const markInvestmentCompleted = db.prepare("UPDATE investments SET status = 'completed' WHERE id = ?");
+const listInvestmentsForAdmin = db.prepare(`
+  SELECT i.*, u.name AS user_name, u.email AS user_email
+  FROM investments i JOIN users u ON u.id = i.user_id
+  ORDER BY i.created_at DESC
+`);
 
-router.post("/investments", (req, res) => {
-  const { userId, project, amount } = req.body || {};
-  if (!userId || !project || !(amount > 0)) {
-    return res.status(400).json({ error: "userId, project, and a positive amount are required." });
+router.get("/investments", (req, res) => {
+  res.json({ investments: listInvestmentsForAdmin.all() });
+});
+
+router.post(
+  "/investments/:id/distribute-profit",
+  requirePermission("approve_investments"),
+  sensitiveActionLimiter,
+  requirePin,
+  (req, res) => {
+    const { amount } = req.body || {};
+    const investment = getInvestment.get(req.params.id);
+    if (!investment) return res.status(404).json({ error: "Investment not found." });
+    if (!(amount > 0)) return res.status(400).json({ error: "A positive amount is required." });
+
+    addProfit.run(Number(amount), investment.id);
+    insertEarningsEvent.run(investment.id, investment.user_id, Number(amount));
+
+    logAction(req.user.id, "investment.distribute_profit", "investment", investment.id, {
+      user_id: investment.user_id,
+      project: investment.project,
+      amount: Number(amount),
+    });
+    notify(
+      investment.user_id,
+      "profit_distributed",
+      `You received $${amount} profit on your investment in ${investment.project}. Claim it from your Balance page.`,
+      "/balance.html"
+    );
+    const investor = getUserById.get(investment.user_id);
+    if (investor) {
+      sendEmail({
+        to: investor.email,
+        subject: "You've received a profit distribution",
+        html: layout(
+          "Profit distributed",
+          `<p>Your investment in <strong>${investment.project}</strong> was credited <strong>$${amount}</strong> in profit this period.</p>
+           <p>Log in and visit your Balance page to claim it into your wallet balance.</p>`
+        ),
+      });
+    }
+
+    res.json({ ok: true });
   }
-  const result = insertInvestment.run(userId, String(project).trim(), Number(amount));
-  res.status(201).json({ investment: getInvestment.get(result.lastInsertRowid) });
-});
+);
 
-router.post("/investments/:id/distribute-profit", (req, res) => {
-  const { amount } = req.body || {};
-  const investment = getInvestment.get(req.params.id);
-  if (!investment) return res.status(404).json({ error: "Investment not found." });
-  if (!(amount > 0)) return res.status(400).json({ error: "A positive amount is required." });
-
-  addProfit.run(Number(amount), investment.id);
-  insertEarningsEvent.run(investment.id, investment.user_id, Number(amount));
-  res.json({ ok: true });
-});
-
-router.post("/investments/:id/complete", (req, res) => {
-  const investment = getInvestment.get(req.params.id);
-  if (!investment) return res.status(404).json({ error: "Investment not found." });
-  markInvestmentCompleted.run(investment.id);
-  res.json({ ok: true });
-});
+router.post(
+  "/investments/:id/complete",
+  requirePermission("approve_investments"),
+  (req, res) => {
+    const investment = getInvestment.get(req.params.id);
+    if (!investment) return res.status(404).json({ error: "Investment not found." });
+    markInvestmentCompleted.run(investment.id);
+    logAction(req.user.id, "investment.complete", "investment", investment.id, {
+      user_id: investment.user_id,
+      project: investment.project,
+    });
+    res.json({ ok: true });
+  }
+);
 
 // ---- Withdrawal requests -------------------------------------------------
 
@@ -813,6 +856,8 @@ const AUDIT_LOG_ACTIONS = [
   "backup.download",
   "deposit.approve",
   "deposit.reject",
+  "investment.complete",
+  "investment.distribute_profit",
   "investment_request.approve",
   "investment_request.reject",
   "kyc.approve",

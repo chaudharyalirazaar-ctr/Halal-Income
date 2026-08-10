@@ -220,12 +220,15 @@
     </section>
 
     <!-- ============ ANALYTICS (teaser — full version on analytics.html) ============ -->
-    <section id="analytics" class="section section-alt analytics-section">
+    <!-- Admin-only: hidden by default, shown by the script below only after
+         /api/auth/me confirms an admin session. Public visitors never see
+         this section (and never get billed the /api/analytics request). -->
+    <section id="analytics" class="section section-alt analytics-section" style="display:none;">
       <div class="container">
         <p class="eyebrow" data-i18n="section.analytics.eyebrow">Internal dashboard</p>
         <h2 data-i18n="section.analytics.title">Analytics</h2>
         <p class="analytics-sample-note" data-i18n="analytics.note">
-          Showing sample data for now — not yet connected to a real database.
+          Live data from the database.
         </p>
         <div class="stat-cards">
           <div class="stat-card"><p class="stat-label">Users registered</p><p class="stat-value" id="stat-registered-teaser">0</p></div>
@@ -305,18 +308,46 @@
   <script src="notifications-ui.js"></script>
   <script src="i18n.js"></script>
   <script src="i18n-extra2.js"></script>
-  <script src="analytics.js"></script>
   <script>
-    // Homepage-only: fill the small teaser stat numbers from the same
-    // sample dataset used on the full analytics page.
-    document.addEventListener("DOMContentLoaded", () => {
-      if (typeof sampleData === "undefined") return;
-      const totalReg = sampleData.reduce((s, r) => s + r.registrations, 0);
-      const totalInv = sampleData.reduce((s, r) => s + r.invested, 0);
-      const totalEarn = sampleData.reduce((s, r) => s + r.earned, 0);
-      document.getElementById("stat-registered-teaser").textContent = totalReg.toLocaleString();
-      document.getElementById("stat-invested-teaser").textContent = totalInv.toLocaleString();
-      document.getElementById("stat-earned-teaser").textContent = "$" + totalEarn.toLocaleString();
+    // Homepage-only: the "Internal dashboard" teaser is admin-only. It stays
+    // hidden (see inline style on #analytics) for every visitor except a
+    // logged-in admin, for whom it fills in with real totals from the same
+    // endpoint the full analytics.html page uses (GET /api/analytics,
+    // admin-gated on the backend). This intentionally does NOT reuse
+    // analytics.js as-is: that script assumes date-range filter controls
+    // (#date-from, #date-to, etc.) that only exist on analytics.html, and
+    // crashes with a null-element error if loaded on a page without them.
+    document.addEventListener("DOMContentLoaded", async () => {
+      const user = await Auth.currentUser();
+      if (!user || !user.is_admin) return;
+
+      try {
+        const res = await fetch("/api/analytics", { credentials: "same-origin" });
+        if (!res.ok) return;
+        const { rows } = await res.json();
+        const totalReg = rows.reduce((s, r) => s + r.registrations, 0);
+        const totalInv = rows.reduce((s, r) => s + r.invested, 0);
+        const totalEarn = rows.reduce((s, r) => s + r.earned, 0);
+
+        // i18n.js also targets this element via its own data-i18n dictionary
+        // and, since its DOMContentLoaded listener is registered first (it's
+        // loaded earlier in the page), it would otherwise overwrite this text
+        // right back to the old "sample data" copy. Setting textContent isn't
+        // enough — drop the attribute so i18n.js's language-switch handler
+        // leaves it alone too (same pattern analytics.js itself uses).
+        const note = document.querySelector(".analytics-sample-note");
+        if (note) {
+          note.textContent = "Live data from the database.";
+          note.removeAttribute("data-i18n");
+        }
+
+        document.getElementById("stat-registered-teaser").textContent = totalReg.toLocaleString();
+        document.getElementById("stat-invested-teaser").textContent = totalInv.toLocaleString();
+        document.getElementById("stat-earned-teaser").textContent = "$" + totalEarn.toLocaleString();
+        document.getElementById("analytics").style.display = "";
+      } catch {
+        // Leave the section hidden — no partial/broken dashboard for anyone.
+      }
     });
   </script>
   <script>
