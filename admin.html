@@ -48,6 +48,21 @@
           <p class="eyebrow">Operations</p>
           <h1>Admin panel</h1>
 
+
+          <!-- Tabbed layout: the panel grew past a comfortable single-page
+               scroll, so sections are grouped by what you're actually trying to
+               do. Every section still loads its data on page load (see the
+               DOMContentLoaded handler) — tabs only show/hide, so switching is
+               instant and nothing needs re-fetching. -->
+          <div class="admin-tabs" role="tablist">
+            <button type="button" class="admin-tab" data-tab="dashboard" role="tab" aria-controls="panel-dashboard">Dashboard</button>
+            <button type="button" class="admin-tab" data-tab="approvals" role="tab" aria-controls="panel-approvals">Approvals<span class="admin-tab-badge" id="tab-badge-approvals" hidden></span></button>
+            <button type="button" class="admin-tab" data-tab="projects" role="tab" aria-controls="panel-projects">Projects &amp; profit</button>
+            <button type="button" class="admin-tab" data-tab="people" role="tab" aria-controls="panel-people">Users &amp; support<span class="admin-tab-badge" id="tab-badge-support" hidden></span></button>
+            <button type="button" class="admin-tab" data-tab="settings" role="tab" aria-controls="panel-settings">Settings</button>
+          </div>
+
+          <div class="admin-tab-panel" id="panel-dashboard" role="tabpanel">
           <div class="admin-section">
             <h2 style="margin-top:0;">Overview</h2>
             <div class="stat-cards" id="analytics-stat-cards" style="margin-top:14px;">
@@ -70,7 +85,314 @@
             </div>
           </div>
 
-          <div class="admin-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+          </div>
+
+          <div class="admin-tab-panel" id="panel-approvals" role="tabpanel">
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Pending KYC verifications</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/kyc/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/kyc/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+            <p class="admin-section-count" id="kyc-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>User</th><th>Email</th><th>Submitted</th><th>Document</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="kyc-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Pending deposits</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/deposits/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/deposits/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+            <p class="admin-section-count" id="deposits-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>User</th><th>Email</th><th>Amount</th><th>Method</th><th>Transaction ID</th><th>Proof</th><th>Requested</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="deposits-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Pending withdrawal requests</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/withdrawals/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/withdrawals/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+            <p class="admin-section-count" id="withdrawals-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>User</th><th>Email</th><th>Amount</th><th>Requested</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="withdrawals-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Pending referral redemptions</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/redemptions/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/redemptions/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+            <p class="admin-section-count" id="redemptions-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>User</th><th>Email</th><th>Points</th><th>USDT</th><th>Requested</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="redemptions-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Pending investment requests</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/investment-requests/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/investment-requests/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+            <p class="admin-section-count" id="investment-requests-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>User</th><th>Email</th><th>KYC</th><th>Wallet Balance</th><th>Project</th><th>Amount</th><th>Requested</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="investment-requests-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          </div>
+
+          <div class="admin-tab-panel" id="panel-projects" role="tabpanel">
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Projects</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/projects/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/projects/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+
+            <form id="new-project-form" class="admin-project-form">
+              <div class="admin-project-form-row">
+                <label>Title<input type="text" name="title" required /></label>
+                <label>Target amount ($)<input type="number" name="targetAmount" min="1" step="0.01" required /></label>
+              </div>
+              <label>Description<textarea name="description" rows="2"></textarea></label>
+              <div class="admin-project-form-row">
+                <label>Start date<input type="date" name="startDate" required /></label>
+                <label>End date<input type="date" name="endDate" required /></label>
+              </div>
+              <button type="submit" class="btn btn-primary btn-small">Create project</button>
+              <p id="new-project-error" class="auth-error" style="display:none; color:#b3261e; font-size:0.85rem; margin-top:6px;"></p>
+            </form>
+
+            <p class="admin-section-count" id="projects-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>Title</th><th>Target</th><th>Raised</th><th>Progress</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="projects-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section" id="bulk-distribute-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Bulk distribute profit (by project)</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
+              Split a period's profit across every active investment in a project, proportional to how much each investor put in — faster than crediting investments one at a time once a project has more than a few investors. Still just one PIN to confirm the whole batch.
+            </p>
+
+            <form id="bulk-distribute-form" style="display:grid; gap:12px; max-width:420px; margin-top:14px;">
+              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                <span>Project</span>
+                <select name="projectId" id="bulk-distribute-project-select" required></select>
+              </label>
+              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                <span>Total profit this period ($)</span>
+                <input type="number" name="totalProfit" id="bulk-distribute-total" min="0.01" step="0.01" placeholder="e.g. 18400" />
+              </label>
+              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                <span>Investor share (%)</span>
+                <input type="number" name="sharePercent" id="bulk-distribute-percent" min="0.01" max="100" step="0.01" placeholder="e.g. 7" />
+              </label>
+            </form>
+
+            <div id="bulk-distribute-preview" style="margin-top:16px;"></div>
+            <p id="bulk-distribute-error" style="display:none; color:#b3261e; font-size:0.85rem; margin-top:8px; max-width:65ch;"></p>
+            <button type="button" class="btn btn-primary" id="bulk-distribute-confirm-btn" style="margin-top:10px;" disabled>Distribute to all</button>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>Distribute profit (single investment)</h2>
+            </div>
+            <p style="font-size:0.9rem; opacity:0.75; margin-top:-0.5rem;">
+              Credit a period's profit to one active investment at a time. The investor claims it into their wallet balance from their Balance page.
+            </p>
+            <input
+              type="search"
+              id="distribute-profit-search"
+              placeholder="Search by investor name, email, or project…"
+              style="width:100%; max-width:320px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);"
+            />
+            <p class="admin-section-count" id="distribute-profit-count">Loading…</p>
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>Investor</th><th>Email</th><th>Project</th><th>Amount invested</th><th>Unclaimed profit</th><th>Status</th><th>Started</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="distribute-profit-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-section" id="project-updates-admin-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Project updates</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
+              Post a short note investors will see on their Balance page — a production run finishing, a distribution going out, anything worth explaining beyond the numbers changing.
+            </p>
+
+            <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600; max-width:420px; margin-top:12px;">
+              <span>Project</span>
+              <select id="project-updates-project-select"></select>
+            </label>
+
+            <form id="project-update-form" style="display:grid; gap:10px; max-width:420px; margin-top:12px;">
+              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
+                <span>Update</span>
+                <textarea name="message" rows="3" required placeholder="e.g. August production run complete, profit distributed to investors."></textarea>
+              </label>
+              <p id="project-update-error" style="display:none; color:#b3261e; font-size:0.85rem;"></p>
+              <button type="submit" class="btn btn-primary" style="justify-self:start;">Post update</button>
+            </form>
+
+            <div id="project-update-history" style="display:grid; gap:10px; margin-top:16px;"></div>
+          </div>
+
+          </div>
+
+          <div class="admin-tab-panel" id="panel-people" role="tabpanel">
+          <div class="admin-section" id="support-tickets-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <div class="admin-section-head">
+              <h2 style="margin-top:0;">Support tickets</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/support-tickets/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/support-tickets/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
+              "This didn't answer my question" escalations from the AI assistant widget on the homepage — includes the visitor's chat transcript for context, if there was one.
+            </p>
+            <p class="admin-section-count" id="support-tickets-count" style="margin-top:10px;">Loading…</p>
+            <div id="support-tickets-list" style="display:grid; gap:12px; margin-top:10px;"></div>
+          </div>
+
+          <div class="admin-section">
+            <div class="admin-section-head">
+              <h2>All users</h2>
+              <div class="admin-export-links">
+                <a href="/api/admin/export/users/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
+                <a href="/api/admin/export/users/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
+              </div>
+            </div>
+            <p class="admin-section-count" id="users-count">Loading…</p>
+            <input
+              type="search"
+              id="users-search"
+              placeholder="Search by name, email, or phone…"
+              style="width:100%; max-width:320px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);"
+            />
+            <div class="table-card">
+              <table class="analytics-table">
+                <thead>
+                  <tr><th>Name</th><th>Email</th><th>Phone</th><th>Email verified</th><th>KYC status</th><th>Wallet Balance</th><th>Total withdrawn</th><th>Joined</th><th></th></tr>
+                </thead>
+                <tbody id="users-body"></tbody>
+              </table>
+            </div>
+            <div id="users-pager" style="display:flex; align-items:center; gap:10px; margin-top:12px; font-size:0.85rem;"></div>
+          </div>
+
+          <div class="admin-section" id="team-permissions-section" style="display:none; border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
+            <h2 style="margin-top:0;">Team &amp; permissions</h2>
+            <p style="font-size:0.9rem; opacity:0.75; max-width:70ch;">
+              Give trusted people just the access they need to help run the site — a KYC reviewer, a
+              withdrawals approver, a project manager, or someone who can see everything but approve
+              nothing. Check "Super admin" for full access instead (including managing everyone else's
+              access, backups, and the audit log). Only super admins can see or use this section.
+            </p>
+
+            <div style="margin-top:16px; padding:16px; border:1px solid var(--sand); border-radius:var(--radius); background:var(--parchment, rgba(0,0,0,0.02));">
+              <h3 style="margin:0 0 8px; font-size:0.95rem;">Add a team member</h3>
+              <p style="font-size:0.82rem; opacity:0.7; margin:0 0 10px;">
+                Search any existing user account by email. Adding them here just gives them view access —
+                check the boxes for whatever they should be able to approve, then Save, in the table below.
+              </p>
+              <input
+                type="search"
+                id="add-member-search"
+                placeholder="Search by email…"
+                style="width:100%; max-width:320px; padding:8px 12px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);"
+              />
+              <div id="add-member-results" style="margin-top:10px; display:flex; flex-direction:column; gap:6px;"></div>
+            </div>
+
+            <p class="admin-section-count" id="team-count" style="margin-top:20px;">Loading…</p>
+            <input
+              type="search"
+              id="team-search"
+              placeholder="Search team members by name or email…"
+              style="width:100%; max-width:320px; margin:0 0 12px; padding:8px 12px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);"
+            />
+            <div class="table-card">
+              <table class="analytics-table" id="team-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Super admin</th>
+                    <th>Approve<br/>KYC</th>
+                    <th>Approve<br/>deposits</th>
+                    <th>Approve<br/>withdrawals</th>
+                    <th>Approve<br/>investments</th>
+                    <th>Approve<br/>redemptions</th>
+                    <th>Manage<br/>projects</th>
+                    <th>Manage<br/>support</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="team-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          </div>
+
+          <div class="admin-tab-panel" id="panel-settings" role="tabpanel">
+          <div class="admin-section" id="backup-section" style="display:none; border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
             <h2 style="margin-top:0;">Backup &amp; restore</h2>
             <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
               A backup is a single .zip with everything: the full database (all users, investments,
@@ -257,300 +579,8 @@
             </div>
           </div>
 
-          <div class="admin-section">
-            <div class="admin-section-head">
-              <h2>Projects</h2>
-              <div class="admin-export-links">
-                <a href="/api/admin/export/projects/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
-                <a href="/api/admin/export/projects/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
-              </div>
-            </div>
-
-            <form id="new-project-form" class="admin-project-form">
-              <div class="admin-project-form-row">
-                <label>Title<input type="text" name="title" required /></label>
-                <label>Target amount ($)<input type="number" name="targetAmount" min="1" step="0.01" required /></label>
-              </div>
-              <label>Description<textarea name="description" rows="2"></textarea></label>
-              <div class="admin-project-form-row">
-                <label>Start date<input type="date" name="startDate" required /></label>
-                <label>End date<input type="date" name="endDate" required /></label>
-              </div>
-              <button type="submit" class="btn btn-primary btn-small">Create project</button>
-              <p id="new-project-error" class="auth-error" style="display:none; color:#b3261e; font-size:0.85rem; margin-top:6px;"></p>
-            </form>
-
-            <p class="admin-section-count" id="projects-count">Loading…</p>
-            <div class="table-card">
-              <table class="analytics-table">
-                <thead>
-                  <tr><th>Title</th><th>Target</th><th>Raised</th><th>Progress</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr>
-                </thead>
-                <tbody id="projects-body"></tbody>
-              </table>
-            </div>
           </div>
 
-          <div class="admin-section">
-            <div class="admin-section-head">
-              <h2>Pending KYC verifications</h2>
-              <div class="admin-export-links">
-                <a href="/api/admin/export/kyc/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
-                <a href="/api/admin/export/kyc/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
-              </div>
-            </div>
-            <p class="admin-section-count" id="kyc-count">Loading…</p>
-            <div class="table-card">
-              <table class="analytics-table">
-                <thead>
-                  <tr><th>User</th><th>Email</th><th>Submitted</th><th>Document</th><th>Actions</th></tr>
-                </thead>
-                <tbody id="kyc-body"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="admin-section">
-            <div class="admin-section-head">
-              <h2>Pending deposits</h2>
-              <div class="admin-export-links">
-                <a href="/api/admin/export/deposits/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
-                <a href="/api/admin/export/deposits/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
-              </div>
-            </div>
-            <p class="admin-section-count" id="deposits-count">Loading…</p>
-            <div class="table-card">
-              <table class="analytics-table">
-                <thead>
-                  <tr><th>User</th><th>Email</th><th>Amount</th><th>Method</th><th>Transaction ID</th><th>Proof</th><th>Requested</th><th>Actions</th></tr>
-                </thead>
-                <tbody id="deposits-body"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="admin-section">
-            <div class="admin-section-head">
-              <h2>Pending withdrawal requests</h2>
-              <div class="admin-export-links">
-                <a href="/api/admin/export/withdrawals/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
-                <a href="/api/admin/export/withdrawals/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
-              </div>
-            </div>
-            <p class="admin-section-count" id="withdrawals-count">Loading…</p>
-            <div class="table-card">
-              <table class="analytics-table">
-                <thead>
-                  <tr><th>User</th><th>Email</th><th>Amount</th><th>Requested</th><th>Actions</th></tr>
-                </thead>
-                <tbody id="withdrawals-body"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="admin-section">
-            <div class="admin-section-head">
-              <h2>Pending referral redemptions</h2>
-              <div class="admin-export-links">
-                <a href="/api/admin/export/redemptions/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
-                <a href="/api/admin/export/redemptions/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
-              </div>
-            </div>
-            <p class="admin-section-count" id="redemptions-count">Loading…</p>
-            <div class="table-card">
-              <table class="analytics-table">
-                <thead>
-                  <tr><th>User</th><th>Email</th><th>Points</th><th>USDT</th><th>Requested</th><th>Actions</th></tr>
-                </thead>
-                <tbody id="redemptions-body"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="admin-section">
-            <div class="admin-section-head">
-              <h2>Pending investment requests</h2>
-              <div class="admin-export-links">
-                <a href="/api/admin/export/investment-requests/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
-                <a href="/api/admin/export/investment-requests/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
-              </div>
-            </div>
-            <p class="admin-section-count" id="investment-requests-count">Loading…</p>
-            <div class="table-card">
-              <table class="analytics-table">
-                <thead>
-                  <tr><th>User</th><th>Email</th><th>KYC</th><th>Wallet Balance</th><th>Project</th><th>Amount</th><th>Requested</th><th>Actions</th></tr>
-                </thead>
-                <tbody id="investment-requests-body"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="admin-section" id="bulk-distribute-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
-            <h2 style="margin-top:0;">Bulk distribute profit (by project)</h2>
-            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
-              Split a period's profit across every active investment in a project, proportional to how much each investor put in — faster than crediting investments one at a time once a project has more than a few investors. Still just one PIN to confirm the whole batch.
-            </p>
-
-            <form id="bulk-distribute-form" style="display:grid; gap:12px; max-width:420px; margin-top:14px;">
-              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
-                <span>Project</span>
-                <select name="projectId" id="bulk-distribute-project-select" required></select>
-              </label>
-              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
-                <span>Total profit this period ($)</span>
-                <input type="number" name="totalProfit" id="bulk-distribute-total" min="0.01" step="0.01" placeholder="e.g. 18400" />
-              </label>
-              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
-                <span>Investor share (%)</span>
-                <input type="number" name="sharePercent" id="bulk-distribute-percent" min="0.01" max="100" step="0.01" placeholder="e.g. 7" />
-              </label>
-            </form>
-
-            <div id="bulk-distribute-preview" style="margin-top:16px;"></div>
-            <p id="bulk-distribute-error" style="display:none; color:#b3261e; font-size:0.85rem; margin-top:8px; max-width:65ch;"></p>
-            <button type="button" class="btn btn-primary" id="bulk-distribute-confirm-btn" style="margin-top:10px;" disabled>Distribute to all</button>
-          </div>
-
-          <div class="admin-section">
-            <div class="admin-section-head">
-              <h2>Distribute profit (single investment)</h2>
-            </div>
-            <p style="font-size:0.9rem; opacity:0.75; margin-top:-0.5rem;">
-              Credit a period's profit to one active investment at a time. The investor claims it into their wallet balance from their Balance page.
-            </p>
-            <input
-              type="search"
-              id="distribute-profit-search"
-              placeholder="Search by investor name, email, or project…"
-              style="width:100%; max-width:320px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);"
-            />
-            <p class="admin-section-count" id="distribute-profit-count">Loading…</p>
-            <div class="table-card">
-              <table class="analytics-table">
-                <thead>
-                  <tr><th>Investor</th><th>Email</th><th>Project</th><th>Amount invested</th><th>Unclaimed profit</th><th>Status</th><th>Started</th><th>Actions</th></tr>
-                </thead>
-                <tbody id="distribute-profit-body"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="admin-section" id="project-updates-admin-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
-            <h2 style="margin-top:0;">Project updates</h2>
-            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
-              Post a short note investors will see on their Balance page — a production run finishing, a distribution going out, anything worth explaining beyond the numbers changing.
-            </p>
-
-            <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600; max-width:420px; margin-top:12px;">
-              <span>Project</span>
-              <select id="project-updates-project-select"></select>
-            </label>
-
-            <form id="project-update-form" style="display:grid; gap:10px; max-width:420px; margin-top:12px;">
-              <label style="display:grid; gap:4px; font-size:0.85rem; font-weight:600;">
-                <span>Update</span>
-                <textarea name="message" rows="3" required placeholder="e.g. August production run complete, profit distributed to investors."></textarea>
-              </label>
-              <p id="project-update-error" style="display:none; color:#b3261e; font-size:0.85rem;"></p>
-              <button type="submit" class="btn btn-primary" style="justify-self:start;">Post update</button>
-            </form>
-
-            <div id="project-update-history" style="display:grid; gap:10px; margin-top:16px;"></div>
-          </div>
-
-          <div class="admin-section" id="support-tickets-section" style="border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
-            <div class="admin-section-head">
-              <h2 style="margin-top:0;">Support tickets</h2>
-              <div class="admin-export-links">
-                <a href="/api/admin/export/support-tickets/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
-                <a href="/api/admin/export/support-tickets/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
-              </div>
-            </div>
-            <p style="font-size:0.9rem; opacity:0.75; max-width:65ch;">
-              "This didn't answer my question" escalations from the AI assistant widget on the homepage — includes the visitor's chat transcript for context, if there was one.
-            </p>
-            <p class="admin-section-count" id="support-tickets-count" style="margin-top:10px;">Loading…</p>
-            <div id="support-tickets-list" style="display:grid; gap:12px; margin-top:10px;"></div>
-          </div>
-
-          <div class="admin-section">
-            <div class="admin-section-head">
-              <h2>All users</h2>
-              <div class="admin-export-links">
-                <a href="/api/admin/export/users/xlsx" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download Excel</a>
-                <a href="/api/admin/export/users/pdf" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Download PDF</a>
-              </div>
-            </div>
-            <p class="admin-section-count" id="users-count">Loading…</p>
-            <input
-              type="search"
-              id="users-search"
-              placeholder="Search by name, email, or phone…"
-              style="width:100%; max-width:320px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);"
-            />
-            <div class="table-card">
-              <table class="analytics-table">
-                <thead>
-                  <tr><th>Name</th><th>Email</th><th>Phone</th><th>Email verified</th><th>KYC status</th><th>Wallet Balance</th><th>Total withdrawn</th><th>Joined</th><th></th></tr>
-                </thead>
-                <tbody id="users-body"></tbody>
-              </table>
-            </div>
-            <div id="users-pager" style="display:flex; align-items:center; gap:10px; margin-top:12px; font-size:0.85rem;"></div>
-          </div>
-
-          <div class="admin-section" id="team-permissions-section" style="display:none; border:1.5px solid var(--sand); border-radius: var(--radius); padding: 20px 22px;">
-            <h2 style="margin-top:0;">Team &amp; permissions</h2>
-            <p style="font-size:0.9rem; opacity:0.75; max-width:70ch;">
-              Give trusted people just the access they need to help run the site — a KYC reviewer, a
-              withdrawals approver, a project manager, or someone who can see everything but approve
-              nothing. Check "Super admin" for full access instead (including managing everyone else's
-              access, backups, and the audit log). Only super admins can see or use this section.
-            </p>
-
-            <div style="margin-top:16px; padding:16px; border:1px solid var(--sand); border-radius:var(--radius); background:var(--parchment, rgba(0,0,0,0.02));">
-              <h3 style="margin:0 0 8px; font-size:0.95rem;">Add a team member</h3>
-              <p style="font-size:0.82rem; opacity:0.7; margin:0 0 10px;">
-                Search any existing user account by email. Adding them here just gives them view access —
-                check the boxes for whatever they should be able to approve, then Save, in the table below.
-              </p>
-              <input
-                type="search"
-                id="add-member-search"
-                placeholder="Search by email…"
-                style="width:100%; max-width:320px; padding:8px 12px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);"
-              />
-              <div id="add-member-results" style="margin-top:10px; display:flex; flex-direction:column; gap:6px;"></div>
-            </div>
-
-            <p class="admin-section-count" id="team-count" style="margin-top:20px;">Loading…</p>
-            <input
-              type="search"
-              id="team-search"
-              placeholder="Search team members by name or email…"
-              style="width:100%; max-width:320px; margin:0 0 12px; padding:8px 12px; border:1px solid var(--sand); border-radius:8px; font-family:var(--font-body);"
-            />
-            <div class="table-card">
-              <table class="analytics-table" id="team-table">
-                <thead>
-                  <tr>
-                    <th>User</th>
-                    <th>Super admin</th>
-                    <th>Approve<br/>KYC</th>
-                    <th>Approve<br/>deposits</th>
-                    <th>Approve<br/>withdrawals</th>
-                    <th>Approve<br/>investments</th>
-                    <th>Approve<br/>redemptions</th>
-                    <th>Manage<br/>projects</th>
-                    <th>Manage<br/>support</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="team-body"></tbody>
-              </table>
-            </div>
-          </div>
 
         </div>
       </div>
@@ -740,8 +770,59 @@
       });
     }
 
+    // ---- Tabs ----------------------------------------------------------------
+    //
+    // Pure show/hide over the panels already in the page — every section's data
+    // is fetched once on load, so switching is instant. The active tab is kept
+    // in the URL hash so a reload (or a bookmark, or the browser back button)
+    // lands you back where you were instead of resetting to Dashboard.
+
+    const DEFAULT_TAB = "dashboard";
+
+    function activateTab(tabId, { updateHash = true } = {}) {
+      const panel = document.getElementById(`panel-${tabId}`);
+      if (!panel) return activateTab(DEFAULT_TAB, { updateHash });
+
+      document.querySelectorAll(".admin-tab-panel").forEach((p) => {
+        p.classList.toggle("admin-tab-panel-active", p.id === `panel-${tabId}`);
+      });
+      document.querySelectorAll(".admin-tab").forEach((btn) => {
+        const active = btn.dataset.tab === tabId;
+        btn.classList.toggle("admin-tab-active", active);
+        btn.setAttribute("aria-selected", active ? "true" : "false");
+      });
+
+      if (updateHash && window.location.hash !== `#${tabId}`) {
+        // replaceState, not a hash assignment: this shouldn't add a history
+        // entry per click, and shouldn't scroll to an element named after the tab.
+        history.replaceState(null, "", `#${tabId}`);
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function setTabBadge(name, count) {
+      const el = document.getElementById(`tab-badge-${name}`);
+      if (!el) return;
+      el.textContent = count;
+      el.hidden = !count; // no badge at all when there's nothing waiting
+    }
+
+    function wireTabs() {
+      document.querySelectorAll(".admin-tab").forEach((btn) => {
+        btn.addEventListener("click", () => activateTab(btn.dataset.tab));
+      });
+      // Someone pasting/editing the hash directly, or using back/forward.
+      window.addEventListener("hashchange", () => {
+        activateTab(window.location.hash.replace("#", "") || DEFAULT_TAB, { updateHash: false });
+      });
+      activateTab(window.location.hash.replace("#", "") || DEFAULT_TAB, { updateHash: false });
+    }
+
     async function loadAnalytics() {
       const { totals, pending, monthly, projects } = await api("/api/admin/analytics");
+
+      const pendingActions =
+        pending.kyc + pending.deposits + pending.withdrawals + pending.investment_requests + pending.redemptions;
 
       const cards = document.getElementById("analytics-stat-cards");
       cards.innerHTML = [
@@ -750,11 +831,16 @@
         ["Total invested", money(totals.total_invested)],
         ["Total deposited (lifetime)", money(totals.total_deposited)],
         ["Total withdrawn (lifetime)", money(totals.total_withdrawn)],
-        ["Pending actions", pending.kyc + pending.deposits + pending.withdrawals + pending.investment_requests + pending.redemptions],
+        ["Pending actions", pendingActions],
         ["Open support tickets", pending.support_tickets],
       ]
         .map(([label, value]) => `<div class="stat-card"><p class="stat-label">${label}</p><p class="stat-value">${value}</p></div>`)
         .join("");
+
+      // Same numbers, surfaced on the tab nav — so work waiting in a tab
+      // you're not currently looking at is still visible at a glance.
+      setTabBadge("approvals", pendingActions);
+      setTabBadge("support", pending.support_tickets);
 
       const chartEl = document.getElementById("analytics-chart");
       const maxVal = Math.max(1, ...monthly.map((m) => Math.max(m.deposits, m.withdrawals)));
@@ -1950,6 +2036,7 @@
       logoutBtn.style.display = "inline-flex";
       logoutBtn.addEventListener("click", () => Auth.logout());
 
+      wireTabs();
       wireRestoreForm();
       wireTwoFactor();
       wirePinForms();
@@ -1968,9 +2055,13 @@
       loadDistributeProfit();
       loadSupportTickets();
 
-      // Team & permissions and the audit log are super-admin only — hidden
-      // entirely for anyone else, since the backend would 403 either anyway.
+      // Backup/restore, team & permissions, and the audit log are all
+      // super-admin only (requireRole() on the backend) — hidden entirely for
+      // anyone else, since every action in them would 403 anyway. Backup was
+      // previously left visible-but-broken for non-super-admins; grouping it
+      // into the Settings tab made that obvious, so it's gated properly now.
       if (user.role === "super_admin") {
+        document.getElementById("backup-section").style.display = "block";
         document.getElementById("team-permissions-section").style.display = "block";
         document.getElementById("audit-log-section").style.display = "block";
         await loadUsers();

@@ -156,6 +156,76 @@ main > section:last-child { margin-bottom: 40px; }
 .btn-danger:hover { background: #b3261e; color: var(--white); }
 
 /* ---------- ADMIN PANEL ---------- */
+
+/* Tabbed layout. The panel outgrew a single scrollable page, so its sections
+   are grouped by task (see the tab nav in admin.html). Only the active panel
+   is displayed — every section still loads its data on page load, so
+   switching tabs is instant and re-fetches nothing. */
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 22px 0 0;
+  border-bottom: 1.5px solid var(--sand);
+}
+.admin-tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1.5px; /* sit the active underline on top of the nav's border */
+  padding: 10px 16px;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+  opacity: 0.6;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+.admin-tab:hover { opacity: 0.9; }
+.admin-tab-active {
+  opacity: 1;
+  border-bottom-color: var(--emerald);
+}
+/* Count of things actually waiting on you, so you can see there's work in a
+   tab you're not currently looking at. Hidden entirely when the count is 0. */
+.admin-tab-badge {
+  display: inline-block;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #b3261e;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+}
+.admin-tab-badge[hidden] { display: none; }
+.admin-tab-panel { display: none; }
+.admin-tab-panel-active { display: block; }
+/* The first section in a panel doesn't need the usual 40px top gap — the tab
+   nav above it is already the visual separator. */
+.admin-tab-panel > .admin-section:first-child { margin-top: 26px; }
+
+/* On a phone the five tabs wrap onto three rows and eat ~130px of vertical
+   space before any content. A single swipeable strip is a better trade: it
+   costs one row, and the hidden tabs are one thumb-swipe away. */
+@media (max-width: 640px) {
+  .admin-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none; /* the underline already implies "there's more" */
+  }
+  .admin-tabs::-webkit-scrollbar { display: none; }
+  .admin-tab { padding: 10px 13px; font-size: 0.88rem; }
+}
+
 .admin-section { margin-top: 40px; }
 .admin-section h2 { margin-bottom: 4px; }
 .admin-section-head {
