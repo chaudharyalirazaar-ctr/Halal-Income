@@ -12,8 +12,9 @@ const { sendSms } = require("../lib/sms");
 
 const router = express.Router();
 
+const { JWT_SECRET } = require("../lib/config");
+
 const RESET_TOKEN_TTL_MINUTES = 30;
-const JWT_SECRET = process.env.JWT_SECRET || "dev-only-insecure-secret-change-me";
 const PENDING_2FA_COOKIE = "pending2fa";
 const PENDING_2FA_TTL_MINUTES = 5;
 
@@ -31,6 +32,30 @@ const forgotPasswordLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests. Try again later." },
+});
+
+const signupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many accounts created from this network. Try again later." },
+});
+
+// A security PIN is only 4 digits (10,000 possibilities) and a PIN-reset code
+// only 6 (1,000,000) — small enough to exhaust quickly if guesses are
+// unlimited, and the PIN is what stands between a hijacked session and a
+// withdrawal (or, on an admin account, approving one). Keyed per-user rather
+// than per-IP: these routes are all behind requireAuth, so this bounds
+// attempts against a given account instead of punishing everyone behind one
+// shared IP.
+const pinAttemptLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req.user ? `user:${req.user.id}` : req.ip),
+  message: { error: "Too many PIN attempts. Wait 15 minutes and try again." },
 });
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -81,7 +106,7 @@ function isAdult(dobStr) {
   return dob <= cutoff;
 }
 
-router.post("/signup", (req, res) => {
+router.post("/signup", signupLimiter, (req, res) => {
   const { name, email, dob, phone, password, referralCode } = req.body || {};
 
   if (!name || !email || !dob || !phone || !password) {
@@ -254,7 +279,7 @@ router.get("/pin/status", requireAuth, (req, res) => {
 // CURRENT PIN instead — a stolen/guessed password alone shouldn't be enough
 // to silently swap out the PIN that's supposed to protect withdrawals and
 // approvals.
-router.post("/pin", requireAuth, (req, res) => {
+router.post("/pin", requireAuth, pinAttemptLimiter, (req, res) => {
   const { pin, currentPassword, currentPin } = req.body || {};
 
   if (!isValidPinFormat(pin)) {
@@ -275,7 +300,7 @@ router.post("/pin", requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-router.post("/pin/remove", requireAuth, (req, res) => {
+router.post("/pin/remove", requireAuth, pinAttemptLimiter, (req, res) => {
   const { currentPin } = req.body || {};
   if (!req.user.security_pin_hash) return res.status(400).json({ error: "No PIN is set." });
   if (!currentPin || !bcrypt.compareSync(String(currentPin), req.user.security_pin_hash)) {
@@ -337,7 +362,7 @@ router.post("/pin/forgot", requireAuth, pinForgotLimiter, (req, res) => {
   res.json(response);
 });
 
-router.post("/pin/reset", requireAuth, (req, res) => {
+router.post("/pin/reset", requireAuth, pinAttemptLimiter, (req, res) => {
   const { code, pin } = req.body || {};
   if (!isValidPinFormat(pin)) {
     return res.status(400).json({ error: "PIN must be exactly 4 digits." });

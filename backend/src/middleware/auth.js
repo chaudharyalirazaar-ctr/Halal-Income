@@ -1,8 +1,9 @@
 const jwt = require("jsonwebtoken");
 const { db } = require("../db");
 
+const { JWT_SECRET } = require("../lib/config");
+
 const COOKIE_NAME = "session";
-const JWT_SECRET = process.env.JWT_SECRET || "dev-only-insecure-secret-change-me";
 
 const getTokenVersion = db.prepare("SELECT token_version FROM users WHERE id = ?");
 

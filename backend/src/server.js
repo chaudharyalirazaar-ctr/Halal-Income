@@ -51,6 +51,47 @@ const siteRoot = path.join(__dirname, "..", "..");
 app.set("trust proxy", 1);
 
 app.disable("x-powered-by");
+
+// Baseline security headers. Hand-rolled rather than pulling in helmet: it's
+// five headers, and being able to read exactly what's set (and why) beats a
+// dependency whose defaults would need auditing anyway.
+app.use((req, res, next) => {
+  // Stop browsers from MIME-sniffing a response into something executable —
+  // relevant here because admins download user-uploaded KYC docs and payment
+  // proofs through this origin.
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  // Clickjacking: nothing here should ever be framed by another site.
+  res.setHeader("X-Frame-Options", "DENY");
+  // Don't leak full URLs (which can carry reset tokens) to third parties.
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=()");
+  // CSP as defence-in-depth behind output escaping, not instead of it.
+  // 'unsafe-inline' is currently required for both scripts and styles: the
+  // pages carry inline <script> blocks and inline style="..." attributes
+  // throughout. That weakens script-src specifically, so the other
+  // directives are the ones doing real work here — locking down where
+  // scripts/frames/forms can point, which still blocks the most common
+  // injection payloads (external script loads, exfiltration endpoints,
+  // injected iframes). Tightening script-src to a nonce means extracting
+  // every inline block to a file first; worth doing, but a separate change.
+  res.setHeader(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data:",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "object-src 'none'",
+    ].join("; ")
+  );
+  next();
+});
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(attachUser);

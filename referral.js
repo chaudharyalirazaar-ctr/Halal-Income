@@ -23,7 +23,7 @@ async function renderReferralPage() {
   body.innerHTML = "";
   referrals.forEach((r) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${r.name}</td><td>${r.status}</td><td>${r.points}</td>`;
+    tr.innerHTML = `<td>${escapeHtml(r.name)}</td><td>${r.status}</td><td>${r.points}</td>`;
     body.appendChild(tr);
   });
 }
@@ -42,7 +42,7 @@ async function renderLeaderboard() {
     if (row.isYou) tr.style.fontWeight = "700";
     tr.innerHTML =
       `<td>${row.rank}</td>` +
-      `<td>${row.name}${row.isYou ? " (you)" : ""}</td>` +
+      `<td>${escapeHtml(row.name)}${row.isYou ? " (you)" : ""}</td>` +
       `<td>${row.invitedInvestors}</td>` +
       `<td>${row.points}</td>`;
     body.appendChild(tr);

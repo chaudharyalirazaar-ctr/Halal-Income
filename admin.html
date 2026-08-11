@@ -689,8 +689,8 @@
       submissions.forEach((s) => {
         const tr = document.createElement("tr");
         tr.innerHTML =
-          `<td>${s.user_name}</td>` +
-          `<td>${s.user_email}</td>` +
+          `<td>${escapeHtml(s.user_name)}</td>` +
+          `<td>${escapeHtml(s.user_email)}</td>` +
           `<td>${fmtDate(s.created_at)}</td>` +
           `<td><a href="/api/admin/kyc/${s.id}/document" target="_blank" rel="noopener">View</a></td>` +
           `<td class="admin-actions">
@@ -720,8 +720,8 @@
       withdrawals.forEach((w) => {
         const tr = document.createElement("tr");
         tr.innerHTML =
-          `<td>${w.user_name}</td>` +
-          `<td>${w.user_email}</td>` +
+          `<td>${escapeHtml(w.user_name)}</td>` +
+          `<td>${escapeHtml(w.user_email)}</td>` +
           `<td>${money(w.amount)}</td>` +
           `<td>${fmtDate(w.requested_at)}</td>` +
           `<td class="admin-actions">
@@ -751,8 +751,8 @@
       redemptions.forEach((r) => {
         const tr = document.createElement("tr");
         tr.innerHTML =
-          `<td>${r.user_name}</td>` +
-          `<td>${r.user_email}</td>` +
+          `<td>${escapeHtml(r.user_name)}</td>` +
+          `<td>${escapeHtml(r.user_email)}</td>` +
           `<td>${r.points}</td>` +
           `<td>${money(r.usdt_amount)}</td>` +
           `<td>${fmtDate(r.requested_at)}</td>` +
@@ -876,7 +876,7 @@
       projects.forEach((p) => {
         const tr = document.createElement("tr");
         tr.innerHTML =
-          `<td>${p.title}</td><td>${money(p.target_amount)}</td><td>${money(p.raised)}</td>` +
+          `<td>${escapeHtml(p.title)}</td><td>${money(p.target_amount)}</td><td>${money(p.raised)}</td>` +
           `<td>${p.percent}%</td><td>${p.status}</td>`;
         projBody.appendChild(tr);
       });
@@ -899,7 +899,7 @@
         const percent = p.target_amount > 0 ? Math.min(100, Math.round((p.raised / p.target_amount) * 100)) : 0;
         const tr = document.createElement("tr");
         tr.innerHTML =
-          `<td>${p.title}</td>` +
+          `<td>${escapeHtml(p.title)}</td>` +
           `<td>${money(p.target_amount)}</td>` +
           `<td>${money(p.raised)}</td>` +
           `<td>${percent}%</td>` +
@@ -992,11 +992,11 @@
       deposits.forEach((d) => {
         const tr = document.createElement("tr");
         tr.innerHTML =
-          `<td>${d.user_name}</td>` +
-          `<td>${d.user_email}</td>` +
+          `<td>${escapeHtml(d.user_name)}</td>` +
+          `<td>${escapeHtml(d.user_email)}</td>` +
           `<td>${money(d.amount)}</td>` +
           `<td>${PAYMENT_METHOD_LABELS[d.payment_method] || d.payment_method}</td>` +
-          `<td>${d.transaction_id}</td>` +
+          `<td>${escapeHtml(d.transaction_id)}</td>` +
           `<td><a href="/api/admin/deposits/${d.id}/proof" target="_blank" rel="noopener">View</a></td>` +
           `<td>${fmtDate(d.requested_at)}</td>` +
           `<td class="admin-actions">
@@ -1026,11 +1026,11 @@
       requests.forEach((r) => {
         const tr = document.createElement("tr");
         tr.innerHTML =
-          `<td>${r.user_name}</td>` +
-          `<td>${r.user_email}</td>` +
+          `<td>${escapeHtml(r.user_name)}</td>` +
+          `<td>${escapeHtml(r.user_email)}</td>` +
           `<td>${r.kyc_status}</td>` +
           `<td>${money(r.wallet_balance)}</td>` +
-          `<td>${r.project_title}</td>` +
+          `<td>${escapeHtml(r.project_title)}</td>` +
           `<td>${money(r.amount)}</td>` +
           `<td>${fmtDate(r.requested_at)}</td>` +
           `<td class="admin-actions">
@@ -1081,9 +1081,9 @@
       filtered.forEach((i) => {
         const tr = document.createElement("tr");
         tr.innerHTML =
-          `<td>${i.user_name}</td>` +
-          `<td>${i.user_email}</td>` +
-          `<td>${i.project}</td>` +
+          `<td>${escapeHtml(i.user_name)}</td>` +
+          `<td>${escapeHtml(i.user_email)}</td>` +
+          `<td>${escapeHtml(i.project)}</td>` +
           `<td>${money(i.amount)}</td>` +
           `<td>${money(i.profit_this_period)}</td>` +
           `<td>${i.status}</td>` +
@@ -1150,7 +1150,7 @@
         if (!select) return;
         const prevValue = select.value;
         select.innerHTML = projects.length
-          ? projects.map((p) => `<option value="${p.id}">${p.title}${p.status === "closed" ? " (closed)" : ""}</option>`).join("")
+          ? projects.map((p) => `<option value="${p.id}">${escapeHtml(p.title)}${p.status === "closed" ? " (closed)" : ""}</option>`).join("")
           : '<option value="">No projects yet</option>';
         if (prevValue && projects.some((p) => String(p.id) === prevValue)) {
           select.value = prevValue;
@@ -1201,7 +1201,7 @@
       const rows = active
         .map((i) => {
           const share = totalActive > 0 ? (i.amount / totalActive) * investorPool : 0;
-          return `<tr><td>${i.user_name}</td><td>${money(i.amount)}</td><td>${money(share)}</td></tr>`;
+          return `<tr><td>${escapeHtml(i.user_name)}</td><td>${money(i.amount)}</td><td>${money(share)}</td></tr>`;
         })
         .join("");
 
@@ -1270,9 +1270,9 @@
               (u) =>
                 `<div style="border:1px solid var(--sand); border-radius:8px; padding:10px 12px;">
                    <div style="display:flex; justify-content:space-between; gap:12px; font-size:0.78rem; opacity:0.7; margin-bottom:4px;">
-                     <span>${u.admin_name || "Admin"}</span><span>${fmtDate(u.created_at)}</span>
+                     <span>${escapeHtml(u.admin_name || "Admin")}</span><span>${fmtDate(u.created_at)}</span>
                    </div>
-                   <p style="margin:0; white-space:pre-wrap;">${u.message}</p>
+                   <p style="margin:0; white-space:pre-wrap;">${escapeHtml(u.message)}</p>
                  </div>`
             )
             .join("")
@@ -1343,7 +1343,7 @@
             ? `<details style="margin-top:10px;">
                  <summary style="cursor:pointer; font-size:0.82rem; font-weight:600;">AI chat transcript (${t.conversation.length} messages)</summary>
                  <div style="margin-top:8px; display:grid; gap:6px; font-size:0.82rem;">
-                   ${t.conversation.map((m) => `<div><strong>${m.role === "user" ? "Visitor" : "AI"}:</strong> ${m.content}</div>`).join("")}
+                   ${t.conversation.map((m) => `<div><strong>${m.role === "user" ? "Visitor" : "AI"}:</strong> ${escapeHtml(m.content)}</div>`).join("")}
                  </div>
                </details>`
             : "";
@@ -1351,19 +1351,19 @@
         const replyHtml = t.admin_reply
           ? `<div style="margin-top:10px; padding:10px 12px; background:var(--parchment); border-radius:8px;">
                <p style="font-size:0.78rem; opacity:0.7; margin:0 0 4px;">Replied ${fmtDate(t.replied_at)}</p>
-               <p style="margin:0; white-space:pre-wrap;">${t.admin_reply}</p>
+               <p style="margin:0; white-space:pre-wrap;">${escapeHtml(t.admin_reply)}</p>
              </div>`
           : "";
 
         card.innerHTML =
           `<div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
-             <div><strong>${t.name}</strong> <span style="opacity:0.7; font-size:0.85rem;">(${t.email})</span>${t.user_name ? ` <span style="opacity:0.6; font-size:0.78rem;">— account: ${t.user_name}</span>` : ""}</div>
+             <div><strong>${escapeHtml(t.name)}</strong> <span style="opacity:0.7; font-size:0.85rem;">(${escapeHtml(t.email)})</span>${t.user_name ? ` <span style="opacity:0.6; font-size:0.78rem;">— account: ${escapeHtml(t.user_name)}</span>` : ""}</div>
              <div style="display:flex; align-items:center; gap:8px;">
                <span style="font-size:0.78rem; font-weight:600; color:${SUPPORT_STATUS_COLOR[t.status]};">${SUPPORT_STATUS_LABEL[t.status]}</span>
                <span style="font-size:0.78rem; opacity:0.6;">${fmtDate(t.created_at)}</span>
              </div>
            </div>
-           <p style="margin:8px 0 0; white-space:pre-wrap;">${t.message}</p>` +
+           <p style="margin:8px 0 0; white-space:pre-wrap;">${escapeHtml(t.message)}</p>` +
           conversationHtml +
           replyHtml +
           `<form class="support-reply-form" style="display:grid; gap:8px; margin-top:12px; max-width:520px;">
@@ -1434,9 +1434,9 @@
         const tr = document.createElement("tr");
         const canResetPin = currentAdminRole === "super_admin" && u.pin_set;
         tr.innerHTML =
-          `<td>${u.name}${u.is_admin ? " (admin)" : ""}</td>` +
-          `<td>${u.email}</td>` +
-          `<td>${u.phone || "—"}</td>` +
+          `<td>${escapeHtml(u.name)}${u.is_admin ? " (admin)" : ""}</td>` +
+          `<td>${escapeHtml(u.email)}</td>` +
+          `<td>${escapeHtml(u.phone || "—")}</td>` +
           `<td>${u.email_verified ? "Yes" : "No"}</td>` +
           `<td>${u.kyc_status}</td>` +
           `<td>${money(u.wallet_balance)}</td>` +
@@ -1509,7 +1509,7 @@
         .join("");
 
       tr.innerHTML =
-        `<td>${u.name}<br/><span style="opacity:0.65; font-size:0.8rem;">${u.email}</span></td>` +
+        `<td>${escapeHtml(u.name)}<br/><span style="opacity:0.65; font-size:0.8rem;">${escapeHtml(u.email)}</span></td>` +
         `<td style="text-align:center;"><input type="checkbox" class="team-super-checkbox" ${isSuper ? "checked" : ""} /></td>` +
         permCells +
         `<td style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -1613,7 +1613,7 @@
         const row = document.createElement("div");
         row.style.cssText = "display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 10px; border:1px solid var(--sand); border-radius:8px;";
         row.innerHTML =
-          `<span style="font-size:0.88rem;">${u.name} <span style="opacity:0.65;">— ${u.email}</span></span>` +
+          `<span style="font-size:0.88rem;">${escapeHtml(u.name)} <span style="opacity:0.65;">— ${escapeHtml(u.email)}</span></span>` +
           `<button type="button" class="btn btn-primary btn-small add-member-btn">Add to team</button>`;
         row.querySelector(".add-member-btn").addEventListener("click", async (e) => {
           const btn = e.target;

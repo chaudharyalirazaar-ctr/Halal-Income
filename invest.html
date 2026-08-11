@@ -153,10 +153,10 @@
 
       card.innerHTML =
         `<div class="project-card-head">
-           <h3>${project.title}</h3>
+           <h3>${escapeHtml(project.title)}</h3>
            <span class="project-badge ${badge.cls}">${badge.label}</span>
          </div>
-         <p class="project-desc">${project.description || ""}</p>
+         <p class="project-desc">${escapeHtml(project.description || "")}</p>
          <div class="project-progress-track">
            <div class="project-progress-fill" style="width:${project.percent}%"></div>
          </div>

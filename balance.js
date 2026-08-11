@@ -15,11 +15,7 @@ function fmtDate(s) {
   return isNaN(d) ? s : d.toLocaleString();
 }
 
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-}
+// escapeHtml() comes from script.js, which every page loads first.
 
 const PAYMENT_METHOD_LABELS = {
   bank_transfer: "Bank transfer",
@@ -55,7 +51,7 @@ async function renderBalancePage() {
       : "";
     const certificateLink = `<a href="/api/investments/${inv.id}/certificate" class="btn btn-ghost btn-small" target="_blank" rel="noopener">Certificate</a>`;
     tr.innerHTML =
-      `<td>${inv.project}</td>` +
+      `<td>${escapeHtml(inv.project)}</td>` +
       `<td>$${inv.amount.toLocaleString()}</td>` +
       `<td>$${inv.profit_this_period.toLocaleString()}</td>` +
       `<td>${inv.status}</td>` +
@@ -93,7 +89,7 @@ async function renderBalancePage() {
   deposits.forEach((d) => {
     const tr = document.createElement("tr");
     const statusCell = d.status === "rejected" && d.rejection_reason
-      ? `${d.status}<br/><span style="font-size:0.78rem; opacity:0.75;">Reason: ${d.rejection_reason}</span>`
+      ? `${d.status}<br/><span style="font-size:0.78rem; opacity:0.75;">Reason: ${escapeHtml(d.rejection_reason)}</span>`
       : d.status;
     tr.innerHTML =
       `<td>$${d.amount.toLocaleString()}</td>` +
@@ -111,7 +107,7 @@ async function renderBalancePage() {
   withdrawals.forEach((w) => {
     const tr = document.createElement("tr");
     const statusCell = w.status === "rejected" && w.rejection_reason
-      ? `${w.status}<br/><span style="font-size:0.78rem; opacity:0.75;">Reason: ${w.rejection_reason}</span>`
+      ? `${w.status}<br/><span style="font-size:0.78rem; opacity:0.75;">Reason: ${escapeHtml(w.rejection_reason)}</span>`
       : w.status;
     tr.innerHTML =
       `<td>$${w.amount.toLocaleString()}</td>` +
