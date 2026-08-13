@@ -10,7 +10,7 @@
 //
 // Bump CACHE_VERSION when the precached shell files change so old clients
 // pick up the new ones instead of serving a stale cached copy forever.
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const SHELL_CACHE = `halal-income-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `halal-income-runtime-${CACHE_VERSION}`;
 
@@ -85,19 +85,27 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets (css/js/svg/png/etc): stale-while-revalidate — serve the
-  // cached copy instantly if there is one, and refresh it in the background.
+  // Static assets (css/js/svg/png): network-first, falling back to cache.
+  //
+  // This was stale-while-revalidate, which shipped a real bug: pages are
+  // network-first, so after a deploy a browser gets the NEW html immediately
+  // but keeps serving the OLD js from cache. When a release makes the html
+  // depend on something new in a js file (as adding the shared escapeHtml()
+  // helper did), that mismatch throws mid-render — the admin panel's tables
+  // came up empty, with no approve/reject buttons at all.
+  //
+  // Serving fresh assets whenever the network is reachable makes a
+  // half-updated app impossible. It costs a round trip per asset, which is
+  // negligible for a handful of small same-origin files, and the cache
+  // fallback still covers genuinely-offline use.
   event.respondWith(
     caches.open(RUNTIME_CACHE).then((cache) =>
-      cache.match(request).then((cached) => {
-        const network = fetch(request)
-          .then((response) => {
-            if (response.ok) cache.put(request, response.clone());
-            return response;
-          })
-          .catch(() => cached);
-        return cached || network;
-      })
+      fetch(request)
+        .then((response) => {
+          if (response.ok) cache.put(request, response.clone());
+          return response;
+        })
+        .catch(() => cache.match(request).then((cached) => cached || Response.error()))
     )
   );
 });
